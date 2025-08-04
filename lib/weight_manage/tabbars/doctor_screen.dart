@@ -109,12 +109,6 @@ class _DoctorScreenState extends State<DoctorScreen> {
   }
 
   // Check if fixed medical info has changed
-  // void _onFixedFieldChanged() {
-  //   final currentData = _getCurrentFixedDoctorDataFromControllers();
-  //   final isChanged = _isDoctorFixedDataChanged(_initialDoctorData, currentData);
-  //   Provider.of<EditingStateProvider>(context, listen: false).isEditing = isChanged;
-  // }
-
   void _onFixedFieldChanged() {
     final currentData = _getCurrentFixedDoctorDataFromControllers();
     final isChanged = _isDoctorFixedDataChanged(_initialDoctorData, currentData);
@@ -180,7 +174,13 @@ class _DoctorScreenState extends State<DoctorScreen> {
       AppModelsManager.doctor = updatedDoctor;
       await AppModelsManager.saveData();
       _initialDoctorData = updatedDoctor; // Update initial state
-      Provider.of<EditingStateProvider>(context, listen: false).isEditing = false; // Hide buttons
+      // 使用 try-catch 块来捕获 Provider 查找错误
+      try {
+        Provider.of<EditingStateProvider>(context, listen: false).isEditing = false; // Hide buttons
+        print('EditingStateProvider accessed successfully in _saveFixedChanges.');
+      } catch (e) {
+        print('Error accessing EditingStateProvider in _saveFixedChanges: $e');
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('医疗信息已保存！')),
       );
@@ -194,7 +194,13 @@ class _DoctorScreenState extends State<DoctorScreen> {
   // Cancel changes and revert to initial data for fixed medical info
   void _cancelFixedChanges() {
     _loadDoctorData(); // Revert all controllers to initial state
-    Provider.of<EditingStateProvider>(context, listen: false).isEditing = false; // Hide buttons
+    // 使用 try-catch 块来捕获 Provider 查找错误
+    try {
+      Provider.of<EditingStateProvider>(context, listen: false).isEditing = false; // Hide buttons
+      print('EditingStateProvider accessed successfully in _cancelFixedChanges.');
+    } catch (e) {
+      print('Error accessing EditingStateProvider in _cancelFixedChanges: $e');
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('已取消更改。')),
     );
@@ -216,76 +222,86 @@ class _DoctorScreenState extends State<DoctorScreen> {
     _medicationAdherenceController.clear();
     _symptomsController.clear();
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Add Daily Medical Data'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: _formKey, // Reusing form key for dialog
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildTextField(controller: _bloodGlucoseController, labelText: 'Blood Glucose (mg/dL)', keyboardType: TextInputType.number),
-                  _buildTextField(controller: _bloodPressureController, labelText: 'Blood Pressure (e.g., 120/80)'),
-                  _buildTextField(controller: _bodyStatusController, labelText: 'Body Status'),
-                  _buildTextField(controller: _sleepQualityController, labelText: 'Sleep Quality'),
-                  _buildTextField(controller: _waterIntakeMlController, labelText: 'Water Intake (ml)', keyboardType: TextInputType.number),
-                  _buildTextField(controller: _bowelMovementStatusController, labelText: 'Bowel Movement Status'),
-                  _buildTextField(controller: _medicationAdherenceController, labelText: 'Medication Adherence'),
-                  _buildTextField(controller: _symptomsController, labelText: 'Symptoms (comma-separated)'),
-                ].map((widget) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: widget,
-                )).toList(),
+    try { // Add try-catch around showDialog
+      showDialog(
+        context: context,
+        builder: (BuildContext dialogContext) { // 使用 dialogContext
+          return AlertDialog(
+            title: const Text('Add Daily Medical Data'),
+            content: SingleChildScrollView(
+              child: Form(
+                key: _formKey, // Reusing form key for dialog
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildTextField(controller: _bloodGlucoseController, labelText: 'Blood Glucose (mg/dL)', keyboardType: TextInputType.number),
+                    _buildTextField(controller: _bloodPressureController, labelText: 'Blood Pressure (e.g., 120/80)'),
+                    _buildTextField(controller: _bodyStatusController, labelText: 'Body Status'),
+                    _buildTextField(controller: _sleepQualityController, labelText: 'Sleep Quality'),
+                    _buildTextField(controller: _waterIntakeMlController, labelText: 'Water Intake (ml)', keyboardType: TextInputType.number),
+                    _buildTextField(controller: _bowelMovementStatusController, labelText: 'Bowel Movement Status'),
+                    _buildTextField(controller: _medicationAdherenceController, labelText: 'Medication Adherence'),
+                    _buildTextField(controller: _symptomsController, labelText: 'Symptoms (comma-separated)'),
+                  ].map((widget) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: widget,
+                  )).toList(),
+                ),
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (_formKey.currentState!.validate()) {
-                  final newDailyData = DoctorDailyData(
-                    date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-                    bloodGlucose: double.tryParse(_bloodGlucoseController.text),
-                    bloodPressure: _bloodPressureController.text.isNotEmpty ? _bloodPressureController.text : null,
-                    bodyStatus: _bodyStatusController.text.isNotEmpty ? _bodyStatusController.text : null,
-                    sleepQuality: _sleepQualityController.text.isNotEmpty ? _sleepQualityController.text : null,
-                    waterIntakeMl: double.tryParse(_waterIntakeMlController.text),
-                    bowelMovementStatus: _bowelMovementStatusController.text.isNotEmpty ? _bowelMovementStatusController.text : null,
-                    medicationAdherence: _medicationAdherenceController.text.isNotEmpty ? _medicationAdherenceController.text : null,
-                    symptoms: _symptomsController.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
-                  );
-
-                  setState(() {
-                    AppModelsManager.doctor?.dailyDataHistory.add(newDailyData);
-                    // Sort history by date in descending order
-                    AppModelsManager.doctor?.dailyDataHistory.sort((a, b) => b.date.compareTo(a.date));
-                  });
-                  await AppModelsManager.saveData();
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('每日数据已添加！')),
-                  );
-                  // Reload data to ensure FutureBuilder rebuilds
-                  setState(() {
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(); // 使用 dialogContext
+                  setState(() { // <--- Add setState and reload data here
                     _loadDoctorData();
                   });
-                }
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
+                },
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    final newDailyData = DoctorDailyData(
+                      date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+                      bloodGlucose: double.tryParse(_bloodGlucoseController.text),
+                      bloodPressure: _bloodPressureController.text.isNotEmpty ? _bloodPressureController.text : null,
+                      bodyStatus: _bodyStatusController.text.isNotEmpty ? _bodyStatusController.text : null,
+                      sleepQuality: _sleepQualityController.text.isNotEmpty ? _sleepQualityController.text : null,
+                      waterIntakeMl: double.tryParse(_waterIntakeMlController.text),
+                      bowelMovementStatus: _bowelMovementStatusController.text.isNotEmpty ? _bowelMovementStatusController.text : null,
+                      medicationAdherence: _medicationAdherenceController.text.isNotEmpty ? _medicationAdherenceController.text : null,
+                      symptoms: _symptomsController.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
+                    );
+
+                    setState(() {
+                      AppModelsManager.doctor?.dailyDataHistory.add(newDailyData);
+                      // Sort history by date in descending order
+                      AppModelsManager.doctor?.dailyDataHistory.sort((a, b) => b.date.compareTo(a.date));
+                    });
+                    await AppModelsManager.saveData();
+                    Navigator.of(dialogContext).pop(); // 使用 dialogContext
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('每日数据已添加！')),
+                    );
+                    // Reload data to ensure FutureBuilder rebuilds
+                    setState(() {
+                      _loadDoctorData();
+                    });
+                  }
+                },
+                child: const Text('Add'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      print('Error showing or interacting with Add Daily Data dialog: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error in dialog: $e')),
+      );
+    }
   }
 
   // Function to delete a daily data entry
@@ -307,146 +323,146 @@ class _DoctorScreenState extends State<DoctorScreen> {
   Widget build(BuildContext context) {
     final isEditing = Provider.of<EditingStateProvider>(context).isEditing;
 
-    return FutureBuilder<Doctor?>(
-      future: _doctorFuture, // Use the state variable future
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error loading doctor data: ${snapshot.error}'));
-        } else {
-          final doctor = snapshot.data!; // Use snapshot.data directly
+    return  FutureBuilder<Doctor?>(
+        future: _doctorFuture, // Use the state variable future
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error loading doctor data: ${snapshot.error}'));
+          } else {
+            final doctor = snapshot.data!; // Use snapshot.data directly
 
-          return Stack(
-            children: [
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Baseline Medical Information',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSectionCard(
-                        context,
-                        title: 'General Medical History',
-                        children: [
-                          _buildTextField(controller: _allergyMedicationsController, labelText: 'Allergy Medications (comma-separated)'),
-                          _buildTextField(controller: _currentMedicationsController, labelText: 'Current Medications (comma-separated)'),
-                          _buildTextField(controller: _existingMedicalConditionsController, labelText: 'Existing Medical Conditions (comma-separated)'),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSectionCard(
-                        context,
-                        title: 'Blood Lipid Profile',
-                        children: [
-                          _buildTextField(controller: _bloodLipidTotalCholesterolController, labelText: 'Total Cholesterol', keyboardType: TextInputType.number),
-                          _buildTextField(controller: _bloodLipidLDLController, labelText: 'LDL Cholesterol', keyboardType: TextInputType.number),
-                          _buildTextField(controller: _bloodLipidHDLController, labelText: 'HDL Cholesterol', keyboardType: TextInputType.number),
-                          _buildTextField(controller: _bloodLipidTriglyceridesController, labelText: 'Triglycerides', keyboardType: TextInputType.number),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSectionCard(
-                        context,
-                        title: 'Organ Function & Other',
-                        children: [
-                          _buildTextField(controller: _thyroidFunctionController, labelText: 'Thyroid Function'),
-                          _buildTextField(controller: _liverKidneyFunctionController, labelText: 'Liver/Kidney Function'),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded( // Wrap Text with Expanded
-                            child: Text(
-                              'Daily Medical Records',
-                              style: Theme.of(context).textTheme.headlineSmall,
-                            ),
-                          ),
-                          const SizedBox(width: 8), // Add some spacing
-                          Expanded( // Wrap ElevatedButton with Expanded
-                            child: ElevatedButton.icon(
-                              onPressed: _showAddDailyDataDialog,
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add Daily Data'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blueAccent,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            return Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Baseline Medical Information',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildSectionCard(
+                          context,
+                          title: 'General Medical History',
+                          children: [
+                            _buildTextField(controller: _allergyMedicationsController, labelText: 'Allergy Medications (comma-separated)'),
+                            _buildTextField(controller: _currentMedicationsController, labelText: 'Current Medications (comma-separated)'),
+                            _buildTextField(controller: _existingMedicalConditionsController, labelText: 'Existing Medical Conditions (comma-separated)'),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildSectionCard(
+                          context,
+                          title: 'Blood Lipid Profile',
+                          children: [
+                            _buildTextField(controller: _bloodLipidTotalCholesterolController, labelText: 'Total Cholesterol', keyboardType: TextInputType.number),
+                            _buildTextField(controller: _bloodLipidLDLController, labelText: 'LDL Cholesterol', keyboardType: TextInputType.number),
+                            _buildTextField(controller: _bloodLipidHDLController, labelText: 'HDL Cholesterol', keyboardType: TextInputType.number),
+                            _buildTextField(controller: _bloodLipidTriglyceridesController, labelText: 'Triglycerides', keyboardType: TextInputType.number),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildSectionCard(
+                          context,
+                          title: 'Organ Function & Other',
+                          children: [
+                            _buildTextField(controller: _thyroidFunctionController, labelText: 'Thyroid Function'),
+                            _buildTextField(controller: _liverKidneyFunctionController, labelText: 'Liver/Kidney Function'),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded( // Wrap Text with Expanded
+                              child: Text(
+                                'Daily Medical Records',
+                                style: Theme.of(context).textTheme.headlineSmall,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      if (doctor.dailyDataHistory.isEmpty)
-                        const Center(child: Text('No daily medical data recorded yet.'))
-                      else
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: doctor.dailyDataHistory.length,
-                          itemBuilder: (context, index) {
-                            final data = doctor.dailyDataHistory[index];
-                            return _buildDailyDataCard(context, data, index); // Pass index for deletion
-                          },
-                        ),
-                      const SizedBox(height: 80), // Space for buttons
-                    ],
-                  ),
-                ),
-              ),
-              // Confirm/Cancel buttons for fixed medical info
-              if (isEditing)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    color: Colors.white.withOpacity(0.9),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _cancelFixedChanges,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            const SizedBox(width: 8), // Add some spacing
+                            Expanded( // Wrap ElevatedButton with Expanded
+                              child: ElevatedButton.icon(
+                                onPressed: _showAddDailyDataDialog,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add Daily Data'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
                             ),
-                            child: const Text('Cancel', style: TextStyle(fontSize: 16, color: Colors.white)),
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _saveFixedChanges,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.deepOrange,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            child: const Text('Confirm', style: TextStyle(fontSize: 16, color: Colors.white)),
+                        const SizedBox(height: 16),
+                        if (doctor.dailyDataHistory.isEmpty)
+                          const Center(child: Text('No daily medical data recorded yet.'))
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: doctor.dailyDataHistory.length,
+                            itemBuilder: (context, index) {
+                              final data = doctor.dailyDataHistory[index];
+                              return _buildDailyDataCard(context, data, index); // Pass index for deletion
+                            },
                           ),
-                        ),
+                        const SizedBox(height: 80), // Space for buttons
                       ],
                     ),
                   ),
                 ),
-            ],
-          );
-        }
-      },
-    );
+                // Confirm/Cancel buttons for fixed medical info
+                if (isEditing)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      color: Colors.white.withOpacity(0.9),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _cancelFixedChanges,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Cancel', style: TextStyle(fontSize: 16, color: Colors.white)),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _saveFixedChanges,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepOrange,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Confirm', style: TextStyle(fontSize: 16, color: Colors.white)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          }
+        },
+      );
   }
 
   // Reusable section card widget

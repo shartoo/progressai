@@ -109,7 +109,7 @@ class _PsychologyScreenState extends State<PsychologyScreen> {
       _initialPsychologyData = updatedPsychology; // Update initial state
       Provider.of<EditingStateProvider>(context, listen: false).isEditing = false; // Hide buttons
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Psychological information saved!')),
+        const SnackBar(content: Text('心理信息已保存！')),
       );
       // Reload data to ensure FutureBuilder rebuilds
       setState(() {
@@ -123,7 +123,7 @@ class _PsychologyScreenState extends State<PsychologyScreen> {
     _loadPsychologyData(); // Revert all controllers to initial state
     Provider.of<EditingStateProvider>(context, listen: false).isEditing = false; // Hide buttons
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Changes cancelled.')),
+      const SnackBar(content: Text('已取消更改。')),
     );
     // Reload data to ensure FutureBuilder rebuilds
     setState(() {
@@ -150,7 +150,7 @@ class _PsychologyScreenState extends State<PsychologyScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildTextField(controller: _moodStatusController, labelText: 'Mood Status (e.g., Happy, Anxious)'),
-                  _buildTextField(controller: _stressLevelController, labelText: 'Stress Level (Low, Medium, High)'),
+                  _buildTextField(controller: _stressLevelController, labelText: 'Stress Level (e.g., Low, Medium, High)'),
                   _buildTextField(controller: _psychologicalChallengesController, labelText: 'Psychological Challenges (comma-separated)', maxLines: 2),
                 ].map((widget) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -163,6 +163,9 @@ class _PsychologyScreenState extends State<PsychologyScreen> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
+                setState(() { // <--- Add setState and reload data here
+                  _loadPsychologyData();
+                });
               },
               child: const Text('Cancel'),
             ),
@@ -171,8 +174,8 @@ class _PsychologyScreenState extends State<PsychologyScreen> {
                 if (_formKey.currentState!.validate()) {
                   final newDailyData = PsychologyDailyData(
                     date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-                    moodStatus: _moodStatusController.text.isNotEmpty ? _moodStatusController.text : "Neutral",
-                    stressLevel: _stressLevelController.text.isNotEmpty ? _stressLevelController.text : "Medium",
+                    moodStatus: _moodStatusController.text,
+                    stressLevel: _stressLevelController.text,
                     psychologicalChallenges: _psychologicalChallengesController.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
                   );
 
@@ -184,7 +187,7 @@ class _PsychologyScreenState extends State<PsychologyScreen> {
                   await AppModelsManager.saveData();
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Daily psychological data added!')),
+                    const SnackBar(content: Text('每日心理数据已添加！')),
                   );
                   // Reload data to ensure FutureBuilder rebuilds
                   setState(() {
@@ -207,7 +210,7 @@ class _PsychologyScreenState extends State<PsychologyScreen> {
     });
     await AppModelsManager.saveData();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Daily psychological record deleted!')),
+      const SnackBar(content: Text('每日心理记录已删除！')),
     );
     // Reload data to ensure FutureBuilder rebuilds
     setState(() {
@@ -215,29 +218,23 @@ class _PsychologyScreenState extends State<PsychologyScreen> {
     });
   }
 
-  // Helper to get emoji for mood
+  // Helper to get mood emoji
   String _getMoodEmoji(String mood) {
     switch (mood.toLowerCase()) {
       case 'happy':
         return '😊';
-      case 'calm':
-        return '😌';
       case 'anxious':
         return '😟';
       case 'frustrated':
         return '😤';
+      case 'neutral':
+        return '😐';
       case 'sad':
-        return '😔';
-      case 'energetic':
-        return '⚡';
-      case 'tired':
-        return '😴';
-      case 'motivated':
-        return '💪';
-      case 'discouraged':
         return '😞';
+      case 'excited':
+        return '🤩';
       default:
-        return '😐'; // Neutral
+        return '';
     }
   }
 
@@ -245,134 +242,127 @@ class _PsychologyScreenState extends State<PsychologyScreen> {
   Widget build(BuildContext context) {
     final isEditing = Provider.of<EditingStateProvider>(context).isEditing;
 
-    return FutureBuilder<Psychology?>(
-      future: _psychologyFuture, // Use the state variable future
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error loading psychological data: ${snapshot.error}'));
-        } else {
-          final psychology = snapshot.data!; // Use snapshot.data directly
+    return  FutureBuilder<Psychology?>(
+        future: _psychologyFuture, // Use the state variable future
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error loading psychology data: ${snapshot.error}'));
+          } else {
+            final psychology = snapshot.data!; // Use snapshot.data directly
 
-          return Stack(
-            children: [
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Fixed Psychological Information',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSectionCard(
-                        context,
-                        title: 'Motivation & Past Experiences',
-                        children: [
-                          _buildTextField(controller: _weightLossMotivationController, labelText: 'Weight Loss Motivation', maxLines: 3),
-                          _buildTextField(controller: _pastDietExperienceController, labelText: 'Past Diet Experience & Impact', maxLines: 3),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSectionCard(
-                        context,
-                        title: 'Self-Perception & Confidence',
-                        children: [
-                          _buildTextField(controller: _selfConfidenceIndexController, labelText: 'Self-Confidence Index (1-10)', keyboardType: TextInputType.number),
-                          _buildTextField(controller: _selfPerceptionController, labelText: 'Self-Perception (Appearance)', maxLines: 3),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Daily Psychological Records',
-                              style: Theme.of(context).textTheme.headlineSmall,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _showAddDailyDataDialog,
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add Daily Data'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blueAccent,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            return Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Baseline Psychological Information',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildSectionCard(
+                          context,
+                          title: 'Motivation & Self-Perception',
+                          children: [
+                            _buildTextField(controller: _weightLossMotivationController, labelText: 'Weight Loss Motivation'),
+                            _buildTextField(controller: _pastDietExperienceController, labelText: 'Past Diet Experience', maxLines: 3),
+                            _buildTextField(controller: _selfConfidenceIndexController, labelText: 'Self-Confidence Index (1-10)', keyboardType: TextInputType.number),
+                            _buildTextField(controller: _selfPerceptionController, labelText: 'Self-Perception'),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Daily Psychological Records',
+                                style: Theme.of(context).textTheme.headlineSmall,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      if (psychology.dailyDataHistory.isEmpty)
-                        const Center(child: Text('No daily psychological data recorded yet.'))
-                      else
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: psychology.dailyDataHistory.length,
-                          itemBuilder: (context, index) {
-                            final data = psychology.dailyDataHistory[index];
-                            return _buildDailyDataCard(context, data, index); // Pass index for deletion
-                          },
-                        ),
-                      const SizedBox(height: 80), // Space for buttons
-                    ],
-                  ),
-                ),
-              ),
-              // Confirm/Cancel buttons for fixed psychological info
-              if (isEditing)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    color: Colors.white.withOpacity(0.9),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _cancelFixedChanges,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _showAddDailyDataDialog,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add Daily Data'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
                             ),
-                            child: const Text('Cancel', style: TextStyle(fontSize: 16, color: Colors.white)),
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _saveFixedChanges,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.deepOrange,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            child: const Text('Confirm', style: TextStyle(fontSize: 16, color: Colors.white)),
+                        const SizedBox(height: 16),
+                        if (psychology.dailyDataHistory.isEmpty)
+                          const Center(child: Text('No daily psychological data recorded yet.'))
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: psychology.dailyDataHistory.length,
+                            itemBuilder: (context, index) {
+                              final data = psychology.dailyDataHistory[index];
+                              return _buildDailyDataCard(context, data, index); // Pass index for deletion
+                            },
                           ),
-                        ),
+                        const SizedBox(height: 80), // Space for buttons
                       ],
                     ),
                   ),
                 ),
-            ],
-          );
-        }
-      },
-    );
+                // Confirm/Cancel buttons for fixed psychological info
+                if (isEditing)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      color: Colors.white.withOpacity(0.9),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _cancelFixedChanges,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Cancel', style: TextStyle(fontSize: 16, color: Colors.white)),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _saveFixedChanges,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepOrange,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Confirm', style: TextStyle(fontSize: 16, color: Colors.white)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          }
+        },
+      );
   }
 
   // Reusable section card widget

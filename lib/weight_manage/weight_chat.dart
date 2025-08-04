@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gemma/core/chat.dart';
-import 'package:progressai/weight_manage/tabbars/doctor_screen.dart';
-import 'package:progressai/weight_manage/tabbars/fitness_screen.dart';
-import 'package:progressai/weight_manage/tabbars/nutritionist_screen.dart';
-import 'package:progressai/weight_manage/tabbars/psychology_screen.dart';
-import 'package:progressai/weight_manage/tabbars/user_profile_screen.dart';
 import 'package:progressai/weight_manage/user_data.dart';
 import 'package:progressai/weight_manage/weight_home.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:file_picker/file_picker.dart'; // For file picking
-import 'dart:io'; // For File operations
-import 'package:path_provider/path_provider.dart'; // For getting app document directory
+import 'package:file_picker/file_picker.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+
+import '../model_chat.dart';
 
 class WeightChatPage extends StatefulWidget {
   final InferenceChat chatEngine; // chatEngine is now a required parameter
@@ -28,6 +24,8 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
   late TabController _tabController;
   final TextEditingController _messageController = TextEditingController();
   final List<Map<String, String>> _messages = []; // Store chat messages
+  final ModelChat _modelChat = ModelChat();
+  final ScrollController _scrollController = ScrollController(); // Add ScrollController
 
   // Notification counters for each category
   Map<String, int> _notificationCounts = {
@@ -52,17 +50,11 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
   void dispose() {
     _tabController.dispose();
     _messageController.dispose();
+    _scrollController.dispose(); // Dispose the scroll controller
     super.dispose();
   }
 
   // Placeholder method for LLM analysis and data update
-  // This method will be responsible for:
-  // 1. Sending the user's message to the LLM.
-  // 2. Receiving the LLM's response.
-  // 3. Analyzing the LLM's response to identify data updates for UserProfile, Doctor, Nutritionist, Fitness, Psychology.
-  // 4. Updating the respective data models in AppModelsManager.
-  // 5. Updating notification counts based on the number of updated items in each category.
-  // 6. Saving the updated data to local JSON.
   Future<void> _analyzeAndCategorizeLLMResponse(String message, {String? imagePath}) async {
     setState(() {
       _messages.add({
@@ -73,13 +65,19 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
       });
     });
 
-    // --- Accessing chatEngine via widget.chatEngine ---
-    // Here's how you would use widget.chatEngine to send a message to your LLM
-    String llmRawResponse = "";
-    // In a real scenario, you would parse llmRawResponse to extract structured data
-    // and identify which categories (UserProfile, Doctor, etc.) need updating.
+    // Scroll to the bottom after adding user message
+    _scrollToBottom();
 
-    String llmResponse = "Thank you for your message! I'm processing the information.";
+    final jsonResponse = await _modelChat.chat(
+      chatEngine: widget.chatEngine,
+      text: message,
+
+    );
+    print("等待模型返回聊天结果!");
+    final response = ModelChat.parseResponse(jsonResponse);
+    final responseText = ModelChat.getMessage(response) ?? '';
+
+    String llmResponse = "Gemma-3n response : $responseText";
     int updatedCountBasic = 1;
     int updatedCountDoctor = 2;
     int updatedCountNutritionist = 3;
@@ -87,35 +85,24 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
     int updatedCountPsychology = 3;
 
     // For demonstration, let's simulate some updates and notifications
-    // based on a simple keyword check and the simulated LLM response.
     if (message.toLowerCase().contains('weight')) {
-      // Simulate updating UserProfile (e.g., currentWeightKg)
-      // AppModelsManager.userProfile?.currentWeightKg = newWeight;
-      updatedCountBasic = 1; // Simulate 1 update
+      updatedCountBasic = 1;
       llmResponse += "\nI've noted your weight update.";
     }
     if (message.toLowerCase().contains('blood pressure')) {
-      // Simulate updating Doctor data
-      // AppModelsManager.doctor?.dailyDataHistory.add(newDoctorDailyData);
-      updatedCountDoctor = 2; // Simulate 2 updates
+      updatedCountDoctor = 2;
       llmResponse += "\nYour blood pressure data has been recorded.";
     }
     if (message.toLowerCase().contains('food')) {
-      // Simulate updating Nutritionist data
-      // AppModelsManager.nutritionist?.dailyDataHistory.add(newNutritionistDailyData);
-      updatedCountNutritionist = 3; // Simulate 3 updates
+      updatedCountNutritionist = 3;
       llmResponse += "\nYour food intake details are being analyzed.";
     }
     if (message.toLowerCase().contains('exercise')) {
-      // Simulate updating Fitness data
-      // AppModelsManager.fitness?.dailyDataHistory.add(newFitnessDailyData);
-      updatedCountFitness = 1; // Simulate 1 update
+      updatedCountFitness = 1;
       llmResponse += "\nGreat workout! Data updated.";
     }
     if (message.toLowerCase().contains('mood')) {
-      // Simulate updating Psychology data
-      // AppModelsManager.psychology?.dailyDataHistory.add(newPsychologyDailyData);
-      updatedCountPsychology = 2; // Simulate 2 updates
+      updatedCountPsychology = 2;
       llmResponse += "\nI've logged your mood.";
     }
 
@@ -128,11 +115,25 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
       _notificationCounts['Psychology'] = updatedCountPsychology;
     });
 
-    // Simulate saving data
     await AppModelsManager.saveData();
 
     setState(() {
       _messages.add({'role': 'llm', 'text': llmResponse, 'time': DateFormat('hh:mma').format(DateTime.now())});
+    });
+
+    // Scroll to the bottom after adding LLM response
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
     });
   }
 
@@ -146,7 +147,6 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
         _uploadProgress = 0.0;
       });
 
-      // Simulate image upload to local storage
       await _uploadImageToLocal(_attachedImage!);
 
       setState(() {
@@ -158,7 +158,6 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
         const SnackBar(content: Text('Image uploaded successfully!')),
       );
     } else {
-      // User canceled the picker
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Image selection cancelled.')),
       );
@@ -176,20 +175,18 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
       final String localPath = '${imagesDir.path}/$fileName';
       await imageFile.copy(localPath);
 
-      // Simulate progress
       for (int i = 0; i <= 10; i++) {
         await Future.delayed(const Duration(milliseconds: 100));
         setState(() {
           _uploadProgress = i / 10.0;
         });
       }
-      _attachedImage = File(localPath); // Update to the locally saved file
+      _attachedImage = File(localPath);
     } catch (e) {
       print("Error uploading image to local storage: $e");
-      // Handle error, maybe show a message to the user
       setState(() {
         _isUploadingImage = false;
-        _attachedImage = null; // Clear attached image on error
+        _attachedImage = null;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Image upload failed: $e')),
@@ -219,51 +216,49 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
         imagePath: _attachedImage?.path,
       );
       _messageController.clear();
-      _removeAttachedImage(); // Clear attached image after sending
+      _removeAttachedImage();
     }
   }
 
   // Helper to build a tab with an optional notification badge
   Widget _buildTab(String text, IconData icon, int notificationCount) {
     return Tab(
-      child: SizedBox( // Explicitly constrain the height of the tab content
-        height: 55, // A reasonable height for icon + text + badge
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 22), // Slightly smaller icon
-                Text(text, style: const TextStyle(fontSize: 10)), // Slightly smaller text
-              ],
-            ),
-            if (notificationCount > 0)
-              Positioned(
-                right: 0,
-                top: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
+      // Removed SizedBox with fixed height to allow Tab to size itself
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 20), // Reduced icon size from 22 to 20
+              Text(text, style: const TextStyle(fontSize: 9)), // Reduced font size from 10 to 9
+            ],
+          ),
+          if (notificationCount > 0)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 18,
+                  minHeight: 18,
+                ),
+                child: Text(
+                  notificationCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
                   ),
-                  constraints: const BoxConstraints(
-                    minWidth: 18,
-                    minHeight: 18,
-                  ),
-                  child: Text(
-                    notificationCount.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -272,53 +267,43 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Weight Management'),
+        title: const Text('Weight Management Chat'), // 更改标题以区分
         centerTitle: true,
         backgroundColor: Colors.orange[100],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.deepOrange,
-          labelColor: Colors.deepOrange,
-          unselectedLabelColor: Colors.grey,
-          onTap: (index) {
-            Widget destinationScreen;
-            switch (index) {
-              case 0: // Basic
-                destinationScreen = const UserProfileScreen();
-                break;
-              case 1: // Doctor
-                destinationScreen = const DoctorScreen();
-                break;
-              case 2: // Nutritionist
-                destinationScreen = const NutritionistScreen();
-                break;
-              case 3: // Fitness
-                destinationScreen = const FitnessScreen();
-                break;
-              case 4: // Psychology
-                destinationScreen = const PsychologyScreen();
-                break;
-              default:
-                destinationScreen = WeightHome(chatEngine: widget.chatEngine,); // Fallback to WeightHome
-            }
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => destinationScreen),
-            );
-          },
-          tabs: [
-            _buildTab('Basic', Icons.person, _notificationCounts['Basic']!),
-            _buildTab('Doctor', Icons.medical_services, _notificationCounts['Doctor']!),
-            _buildTab('Nutritionist', Icons.restaurant, _notificationCounts['Nutritionist']!),
-            _buildTab('Fitness', Icons.fitness_center, _notificationCounts['Fitness']!),
-            _buildTab('Psychology', Icons.psychology, _notificationCounts['Psychology']!),
-          ],
+        bottom: PreferredSize( // Wrap TabBar in PreferredSize
+          preferredSize: const Size.fromHeight(kToolbarHeight + 12.0), // Give it more height
+          child: TabBar(
+            controller: _tabController,
+            indicatorColor: Colors.deepOrange,
+            labelColor: Colors.deepOrange,
+            unselectedLabelColor: Colors.grey,
+            onTap: (index) {
+              // 这里修改导航逻辑：跳转到 WeightHome 并传递选中的 Tab 索引
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => WeightHome(
+                    chatEngine: widget.chatEngine,
+                    initialTabIndex: index, // 传递选中的 Tab 索引
+                  ),
+                ),
+              );
+            },
+            tabs: [
+              _buildTab('Basic', Icons.person, _notificationCounts['Basic']!),
+              _buildTab('Doctor', Icons.medical_services, _notificationCounts['Doctor']!),
+              _buildTab('Nutritionist', Icons.restaurant, _notificationCounts['Nutritionist']!),
+              _buildTab('Fitness', Icons.fitness_center, _notificationCounts['Fitness']!),
+              _buildTab('Psychology', Icons.psychology, _notificationCounts['Psychology']!),
+            ],
+          ),
         ),
       ),
       body: Column(
         children: [
-          Expanded( // Ensure chat messages take up available space
+          Expanded(
             child: ListView.builder(
+              controller: _scrollController, // Attach ScrollController
               padding: const EdgeInsets.all(16.0),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
@@ -377,7 +362,7 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
               right: 8.0,
               bottom: 8.0 + MediaQuery.of(context).viewInsets.bottom,
             ),
-            child: Column( // Use Column to stack attached image preview and input row
+            child: Column(
               children: [
                 if (_attachedImage != null)
                   Align(
@@ -431,7 +416,7 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
                 Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.image_outlined), // Upload image icon
+                      icon: const Icon(Icons.image_outlined),
                       onPressed: _pickImage,
                       color: Colors.deepOrange,
                     ),
@@ -439,6 +424,8 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
                     Expanded(
                       child: TextField(
                         controller: _messageController,
+                        maxLines: null, // Allow multiple lines for input
+                        keyboardType: TextInputType.multiline, // Set keyboard type for multiline
                         decoration: InputDecoration(
                           hintText: 'Type your message...',
                           border: OutlineInputBorder(
@@ -461,7 +448,7 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
                     ),
                   ],
                 ),
-                const SizedBox(height: 8.0), // Add a small bottom padding for visual spacing
+                const SizedBox(height: 8.0),
               ],
             ),
           ),

@@ -278,203 +278,212 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final isEditing = Provider.of<EditingStateProvider>(context).isEditing;
 
     // Use a FutureBuilder to ensure data is loaded before building the UI
-    return FutureBuilder(
-      future: AppModelsManager.userProfile != null ? Future.value(AppModelsManager.userProfile) : AppModelsManager.loadData().then((_) => AppModelsManager.userProfile),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error loading user data: ${snapshot.error}'));
-        } else {
-          // Data is loaded, ensure controllers are up-to-date if not already
-          if (_ageController.text.isEmpty && AppModelsManager.userProfile != null) {
-            _loadUserProfileData(); // Re-initialize if data was null initially
-          }
+    return Scaffold( // 显式设置 Scaffold 的背景颜色
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // 使用主题定义的背景色
+      appBar: AppBar(
+        title: const Text('User Profile'),
+        centerTitle: true,
+        backgroundColor: Colors.orange[100], // 可以根据需要调整颜色
+        foregroundColor: Colors.black87,
+      ),
+      body: FutureBuilder(
+        future: AppModelsManager.userProfile != null ? Future.value(AppModelsManager.userProfile) : AppModelsManager.loadData().then((_) => AppModelsManager.userProfile),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error loading user data: ${snapshot.error}'));
+          } else {
+            // Data is loaded, ensure controllers are up-to-date if not already
+            if (_ageController.text.isEmpty && AppModelsManager.userProfile != null) {
+              _loadUserProfileData(); // Re-initialize if data was null initially
+            }
 
-          final userProfile = AppModelsManager.userProfile!; // Guaranteed to be not null here
+            final userProfile = AppModelsManager.userProfile!; // Guaranteed to be not null here
 
-          // Calculate progress percentage
-          double progress = 0.0;
-          if (userProfile.initialWeightKg != userProfile.targetWeightKg) {
-            progress = (userProfile.initialWeightKg - userProfile.currentWeightKg) /
-                (userProfile.initialWeightKg - userProfile.targetWeightKg);
-            progress = progress.clamp(0.0, 1.0); // Clamp between 0 and 1
-          }
+            // Calculate progress percentage
+            double progress = 0.0;
+            if (userProfile.initialWeightKg != userProfile.targetWeightKg) {
+              progress = (userProfile.initialWeightKg - userProfile.currentWeightKg) /
+                  (userProfile.initialWeightKg - userProfile.targetWeightKg);
+              progress = progress.clamp(0.0, 1.0); // Clamp between 0 and 1
+            }
 
-          return Stack(
-            children: [
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      // Age, Gender, Profession (Occupation)
-                      Row(
-                        children: [
-                          Expanded(child: _buildTextField(controller: _ageController, labelText: 'Age', keyboardType: TextInputType.number)),
-                          const SizedBox(width: 16),
-                          Expanded(child: _buildDropdownField(value: _selectedGender, options: _genderOptions, labelText: 'Gender', onChanged: (value) { setState(() => _selectedGender = value!); _onFieldChanged(); })),
-                          const SizedBox(width: 16),
-                          Expanded(child: _buildTextField(controller: _occupationController, labelText: 'Profession')),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Height, Current Weight, Target Weight
-                      Row(
-                        children: [
-                          Expanded(child: _buildTextField(controller: _heightController, labelText: 'Height (cm)', keyboardType: const TextInputType.numberWithOptions(decimal: true))),
-                          const SizedBox(width: 16),
-                          Expanded(child: _buildTextField(controller: _currentWeightController, labelText: 'Weight (kg)', keyboardType: const TextInputType.numberWithOptions(decimal: true))),
-                          const SizedBox(width: 16),
-                          Expanded(child: _buildTextField(controller: _targetWeightController, labelText: 'Target (kg)', keyboardType: const TextInputType.numberWithOptions(decimal: true))),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
+            return Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        // Age, Gender, Profession (Occupation)
+                        Row(
+                          children: [
+                            Expanded(child: _buildTextField(controller: _ageController, labelText: 'Age', keyboardType: TextInputType.number)),
+                            const SizedBox(width: 16),
+                            Expanded(child: _buildDropdownField(value: _selectedGender, options: _genderOptions, labelText: 'Gender', onChanged: (value) { setState(() => _selectedGender = value!); _onFieldChanged(); })),
+                            const SizedBox(width: 16),
+                            Expanded(child: _buildTextField(controller: _occupationController, labelText: 'Profession')),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Height, Current Weight, Target Weight
+                        Row(
+                          children: [
+                            Expanded(child: _buildTextField(controller: _heightController, labelText: 'Height (cm)', keyboardType: const TextInputType.numberWithOptions(decimal: true))),
+                            const SizedBox(width: 16),
+                            Expanded(child: _buildTextField(controller: _currentWeightController, labelText: 'Weight (kg)', keyboardType: const TextInputType.numberWithOptions(decimal: true))),
+                            const SizedBox(width: 16),
+                            Expanded(child: _buildTextField(controller: _targetWeightController, labelText: 'Target (kg)', keyboardType: const TextInputType.numberWithOptions(decimal: true))),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
 
-                      // Progress Bar
-                      Text('Progress', style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: progress,
-                        backgroundColor: Colors.grey[300],
-                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
-                        minHeight: 10,
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      const SizedBox(height: 8),
-                      Text('${(progress * 100).toInt()}%', style: Theme.of(context).textTheme.bodyMedium),
-                      const SizedBox(height: 24),
+                        // Progress Bar
+                        Text('Progress', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(
+                          value: progress,
+                          backgroundColor: Colors.grey[300],
+                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
+                          minHeight: 10,
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        const SizedBox(height: 8),
+                        Text('${(progress * 100).toInt()}%', style: Theme.of(context).textTheme.bodyMedium),
+                        const SizedBox(height: 24),
 
-                      // Target Date
-                      Text('Target Date', style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      GestureDetector(
-                        onTap: () => _selectDate(context),
-                        child: AbsorbPointer(
-                          child: _buildTextField(
-                            controller: _targetDateController,
-                            labelText: 'Select Date',
-                            validator: (value) => value == null || value.isEmpty ? 'Please select target date' : null,
+                        // Target Date
+                        Text('Target Date', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () => _selectDate(context),
+                          child: AbsorbPointer(
+                            child: _buildTextField(
+                              controller: _targetDateController,
+                              labelText: 'Select Date',
+                              validator: (value) => value == null || value.isEmpty ? 'Please select target date' : null,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                      // Weight History Line Graph
-                      Text('Weight History', style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        height: 200,
-                        child: LineChart(
-                          LineChartData(
-                            gridData: const FlGridData(show: false),
-                            titlesData: FlTitlesData(
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  interval: 1,
-                                  getTitlesWidget: (value, meta) {
-                                    if (value.toInt() < userProfile.weightHistory.length) {
-                                      final date = DateTime.parse(userProfile.weightHistory[value.toInt()].date);
-                                      return SideTitleWidget(
-                                        axisSide: meta.axisSide,
-                                        child: Text(DateFormat('MM/dd').format(date), style: const TextStyle(fontSize: 10)),
-                                      );
-                                    }
-                                    return const Text('');
-                                  },
+                        // Weight History Line Graph
+                        Text('Weight History', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          height: 200,
+                          child: LineChart(
+                            LineChartData(
+                              gridData: const FlGridData(show: false),
+                              titlesData: FlTitlesData(
+                                bottomTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    interval: 1,
+                                    getTitlesWidget: (value, meta) {
+                                      if (value.toInt() < userProfile.weightHistory.length) {
+                                        final date = DateTime.parse(userProfile.weightHistory[value.toInt()].date);
+                                        return SideTitleWidget(
+                                          axisSide: meta.axisSide,
+                                          child: Text(DateFormat('MM/dd').format(date), style: const TextStyle(fontSize: 10)),
+                                        );
+                                      }
+                                      return const Text('');
+                                    },
+                                  ),
                                 ),
-                              ),
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  interval: 5, // Adjust interval as needed
-                                  getTitlesWidget: (value, meta) {
-                                    return Text('${value.toInt()}kg', style: const TextStyle(fontSize: 10));
-                                  },
+                                leftTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    interval: 5, // Adjust interval as needed
+                                    getTitlesWidget: (value, meta) {
+                                      return Text('${value.toInt()}kg', style: const TextStyle(fontSize: 10));
+                                    },
+                                  ),
                                 ),
+                                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                               ),
-                              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            ),
-                            borderData: FlBorderData(
-                              show: true,
-                              border: Border.all(color: const Color(0xff37434d), width: 1),
-                            ),
-                            lineBarsData: [
-                              LineChartBarData(
-                                spots: userProfile.weightHistory.asMap().entries.map((entry) {
-                                  return FlSpot(entry.key.toDouble(), entry.value.weightKg);
-                                }).toList(),
-                                isCurved: true,
-                                color: Colors.blue,
-                                barWidth: 3,
-                                isStrokeCapRound: true,
-                                dotData: const FlDotData(show: true),
-                                belowBarData: BarAreaData(show: false),
+                              borderData: FlBorderData(
+                                show: true,
+                                border: Border.all(color: const Color(0xff37434d), width: 1),
                               ),
-                            ],
-                            minX: 0,
-                            maxX: (userProfile.weightHistory.length - 1).toDouble().clamp(0, double.infinity),
-                            minY: userProfile.weightHistory.isNotEmpty
-                                ? userProfile.weightHistory.map((e) => e.weightKg).reduce(min) - 5
-                                : 0,
-                            maxY: userProfile.weightHistory.isNotEmpty
-                                ? userProfile.weightHistory.map((e) => e.weightKg).reduce(max) + 5
-                                : 100,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 80), // Space for buttons
-                    ],
-                  ),
-                ),
-              ),
-              // Confirm/Cancel buttons
-              if (isEditing)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    color: Colors.white.withOpacity(0.9),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _cancelChanges,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              lineBarsData: [
+                                LineChartBarData(
+                                  spots: userProfile.weightHistory.asMap().entries.map((entry) {
+                                    return FlSpot(entry.key.toDouble(), entry.value.weightKg);
+                                  }).toList(),
+                                  isCurved: true,
+                                  color: Colors.blue,
+                                  barWidth: 3,
+                                  isStrokeCapRound: true,
+                                  dotData: const FlDotData(show: true),
+                                  belowBarData: BarAreaData(show: false),
+                                ),
+                              ],
+                              minX: 0,
+                              maxX: (userProfile.weightHistory.length - 1).toDouble().clamp(0, double.infinity),
+                              minY: userProfile.weightHistory.isNotEmpty
+                                  ? userProfile.weightHistory.map((e) => e.weightKg).reduce(min) - 5
+                                  : 0,
+                              maxY: userProfile.weightHistory.isNotEmpty
+                                  ? userProfile.weightHistory.map((e) => e.weightKg).reduce(max) + 5
+                                  : 100,
                             ),
-                            child: const Text('Cancel', style: TextStyle(fontSize: 16, color: Colors.white)),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _saveChanges,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.deepOrange,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            child: const Text('Confirm', style: TextStyle(fontSize: 16, color: Colors.white)),
-                          ),
-                        ),
+                        const SizedBox(height: 80), // Space for buttons
                       ],
                     ),
                   ),
                 ),
-            ],
-          );
-        }
-      },
+                // Confirm/Cancel buttons
+                if (isEditing)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      color: Colors.white.withOpacity(0.9),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _cancelChanges,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Cancel', style: TextStyle(fontSize: 16, color: Colors.white)),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _saveChanges,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepOrange,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Confirm', style: TextStyle(fontSize: 16, color: Colors.white)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          }
+        },
+      ),
     );
   }
 

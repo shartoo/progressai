@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../main.dart';
+import '../../main.dart'; // Ensure main.dart is imported to access EditingStateProvider
 import '../user_data.dart';
 
 class FitnessScreen extends StatefulWidget {
@@ -41,6 +41,7 @@ class _FitnessScreenState extends State<FitnessScreen> {
   late TextEditingController _recoveryStatusController;
 
   Fitness? _initialFitnessData; // To track changes for fixed fitness info
+  Future<Fitness?>? _fitnessFuture; // Future to hold the fitness data
 
   @override
   void initState() {
@@ -49,42 +50,48 @@ class _FitnessScreenState extends State<FitnessScreen> {
   }
 
   void _loadFitnessData() {
-    final fitnessData = AppModelsManager.fitness ?? Fitness.defaultFitness();
-    _initialFitnessData = fitnessData; // Save initial state
+    // Set the future that FutureBuilder will listen to
+    _fitnessFuture = AppModelsManager.loadData().then((_) {
+      final fitnessData = AppModelsManager.fitness ?? Fitness.defaultFitness();
+      _initialFitnessData = fitnessData; // Save initial state
 
-    _likedExercisesController = TextEditingController(text: fitnessData.likedExercises.join(', '));
-    _dislikedExercisesController = TextEditingController(text: fitnessData.dislikedExercises.join(', '));
-    _preferredWorkoutStyleController = TextEditingController(text: fitnessData.preferredWorkoutStyle);
-    _physicalLimitationsController = TextEditingController(text: fitnessData.physicalLimitations.join(', '));
-    _fitnessGoalsController = TextEditingController(text: fitnessData.fitnessGoals.join(', '));
-    _waistCircumferenceController = TextEditingController(text: fitnessData.bodyMeasurements['腰围']?.toString() ?? '');
-    _hipCircumferenceController = TextEditingController(text: fitnessData.bodyMeasurements['臀围']?.toString() ?? '');
-    _chestCircumferenceController = TextEditingController(text: fitnessData.bodyMeasurements['胸围']?.toString() ?? '');
+      _likedExercisesController = TextEditingController(text: fitnessData.likedExercises.join(', '));
+      _dislikedExercisesController = TextEditingController(text: fitnessData.dislikedExercises.join(', '));
+      _preferredWorkoutStyleController = TextEditingController(text: fitnessData.preferredWorkoutStyle);
+      _physicalLimitationsController = TextEditingController(text: fitnessData.physicalLimitations.join(', '));
+      _fitnessGoalsController = TextEditingController(text: fitnessData.fitnessGoals.join(', '));
+      // Accessing bodyMeasurements with English keys based on user_data.dart structure
+      _waistCircumferenceController = TextEditingController(text: fitnessData.bodyMeasurements?['Waist']?.toString() ?? '');
+      _hipCircumferenceController = TextEditingController(text: fitnessData.bodyMeasurements?['Hip']?.toString() ?? '');
+      _chestCircumferenceController = TextEditingController(text: fitnessData.bodyMeasurements?['Chest']?.toString() ?? '');
 
-    // Add listeners for fixed fitness info fields
-    _likedExercisesController.addListener(_onFixedFieldChanged);
-    _dislikedExercisesController.addListener(_onFixedFieldChanged);
-    _preferredWorkoutStyleController.addListener(_onFixedFieldChanged);
-    _physicalLimitationsController.addListener(_onFixedFieldChanged);
-    _fitnessGoalsController.addListener(_onFixedFieldChanged);
-    _waistCircumferenceController.addListener(_onFixedFieldChanged);
-    _hipCircumferenceController.addListener(_onFixedFieldChanged);
-    _chestCircumferenceController.addListener(_onFixedFieldChanged);
+      // Add listeners for fixed fitness info fields
+      _likedExercisesController.addListener(_onFixedFieldChanged);
+      _dislikedExercisesController.addListener(_onFixedFieldChanged);
+      _preferredWorkoutStyleController.addListener(_onFixedFieldChanged);
+      _physicalLimitationsController.addListener(_onFixedFieldChanged);
+      _fitnessGoalsController.addListener(_onFixedFieldChanged);
+      _waistCircumferenceController.addListener(_onFixedFieldChanged);
+      _hipCircumferenceController.addListener(_onFixedFieldChanged);
+      _chestCircumferenceController.addListener(_onFixedFieldChanged);
 
-    // Initialize daily data controllers (will be reset for each new entry)
-    _exerciseItemController = TextEditingController();
-    _estimatedCalorieBurnController = TextEditingController();
-    _fatLossAreaController = TextEditingController();
-    _workoutDurationMinutesController = TextEditingController();
-    _intensityLevelController = TextEditingController();
-    _exerciseSummaryController = TextEditingController();
-    _averageHeartRateController = TextEditingController();
-    _peakHeartRateController = TextEditingController();
-    _strengthTrainingDetailsController = TextEditingController();
-    _cardioDetailsController = TextEditingController();
-    _userBodyStatusController = TextEditingController();
-    _feelingAfterWorkoutController = TextEditingController();
-    _recoveryStatusController = TextEditingController();
+      // Initialize daily data controllers (will be reset for each new entry)
+      _exerciseItemController = TextEditingController();
+      _estimatedCalorieBurnController = TextEditingController();
+      _fatLossAreaController = TextEditingController();
+      _workoutDurationMinutesController = TextEditingController();
+      _intensityLevelController = TextEditingController();
+      _exerciseSummaryController = TextEditingController();
+      _averageHeartRateController = TextEditingController();
+      _peakHeartRateController = TextEditingController();
+      _strengthTrainingDetailsController = TextEditingController();
+      _cardioDetailsController = TextEditingController();
+      _userBodyStatusController = TextEditingController();
+      _feelingAfterWorkoutController = TextEditingController();
+      _recoveryStatusController = TextEditingController();
+
+      return fitnessData; // Return the loaded data
+    });
   }
 
   @override
@@ -129,9 +136,9 @@ class _FitnessScreenState extends State<FitnessScreen> {
       physicalLimitations: _physicalLimitationsController.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
       fitnessGoals: _fitnessGoalsController.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
       bodyMeasurements: {
-        "腰围": double.tryParse(_waistCircumferenceController.text) ?? 0.0,
-        "臀围": double.tryParse(_hipCircumferenceController.text) ?? 0.0,
-        "胸围": double.tryParse(_chestCircumferenceController.text) ?? 0.0,
+        "Waist": double.tryParse(_waistCircumferenceController.text) ?? 0.0,
+        "Hip": double.tryParse(_hipCircumferenceController.text) ?? 0.0,
+        "Chest": double.tryParse(_chestCircumferenceController.text) ?? 0.0,
       },
       dailyDataHistory: AppModelsManager.fitness?.dailyDataHistory ?? [], // Preserve daily history
     );
@@ -166,6 +173,7 @@ class _FitnessScreenState extends State<FitnessScreen> {
     return true;
   }
 
+
   // Save changes to AppModelsManager and local storage for fixed fitness info
   void _saveFixedChanges() async {
     if (_formKey.currentState!.validate()) {
@@ -177,6 +185,10 @@ class _FitnessScreenState extends State<FitnessScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('健身信息已保存！')),
       );
+      // Reload data to ensure FutureBuilder rebuilds
+      setState(() {
+        _loadFitnessData();
+      });
     }
   }
 
@@ -187,6 +199,10 @@ class _FitnessScreenState extends State<FitnessScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('已取消更改。')),
     );
+    // Reload data to ensure FutureBuilder rebuilds
+    setState(() {
+      _loadFitnessData();
+    });
   }
 
   // Show dialog to add new daily data
@@ -208,7 +224,7 @@ class _FitnessScreenState extends State<FitnessScreen> {
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) { // Use dialogContext for the dialog's context
         return AlertDialog(
           title: const Text('Add Daily Fitness Data'),
           content: SingleChildScrollView(
@@ -240,7 +256,10 @@ class _FitnessScreenState extends State<FitnessScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop(); // Use dialogContext to pop the dialog
+                setState(() { // <--- Add setState and reload data here to refresh the screen
+                  _loadFitnessData();
+                });
               },
               child: const Text('Cancel'),
             ),
@@ -297,10 +316,14 @@ class _FitnessScreenState extends State<FitnessScreen> {
                     AppModelsManager.fitness?.dailyDataHistory.sort((a, b) => b.date.compareTo(a.date));
                   });
                   await AppModelsManager.saveData();
-                  Navigator.of(context).pop();
+                  Navigator.of(dialogContext).pop(); // Use dialogContext to pop the dialog
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('每日健身数据已添加！')),
                   );
+                  // Reload data to ensure FutureBuilder rebuilds after adding data
+                  setState(() {
+                    _loadFitnessData();
+                  });
                 }
               },
               child: const Text('Add'),
@@ -311,142 +334,157 @@ class _FitnessScreenState extends State<FitnessScreen> {
     );
   }
 
+  // Function to delete a daily data entry
+  void _deleteDailyData(int index) async {
+    setState(() {
+      AppModelsManager.fitness?.dailyDataHistory.removeAt(index);
+    });
+    await AppModelsManager.saveData();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('每日健身记录已删除！')),
+    );
+    // Reload data to ensure FutureBuilder rebuilds
+    setState(() {
+      _loadFitnessData();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEditing = Provider.of<EditingStateProvider>(context).isEditing;
 
-    return FutureBuilder(
-      future: AppModelsManager.fitness != null ? Future.value(AppModelsManager.fitness) : AppModelsManager.loadData().then((_) => AppModelsManager.fitness),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error loading fitness data: ${snapshot.error}'));
-        } else {
-          final fitness = AppModelsManager.fitness!; // Guaranteed to be not null here
+    return  FutureBuilder<Fitness?>(
+        future: _fitnessFuture, // Use the state variable future
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error loading fitness data: ${snapshot.error}'));
+          } else {
+            final fitness = snapshot.data!; // Guaranteed to be not null here
 
-          return Stack(
-            children: [
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Fixed Fitness Information',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSectionCard(
-                        context,
-                        title: 'Preferences & Goals',
-                        children: [
-                          _buildTextField(controller: _likedExercisesController, labelText: 'Liked Exercises (comma-separated)'),
-                          _buildTextField(controller: _dislikedExercisesController, labelText: 'Disliked Exercises (comma-separated)'),
-                          _buildTextField(controller: _preferredWorkoutStyleController, labelText: 'Preferred Workout Style'),
-                          _buildTextField(controller: _physicalLimitationsController, labelText: 'Physical Limitations (comma-separated)'),
-                          _buildTextField(controller: _fitnessGoalsController, labelText: 'Fitness Goals (comma-separated)'),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSectionCard(
-                        context,
-                        title: 'Body Measurements (cm)',
-                        children: [
-                          _buildTextField(controller: _waistCircumferenceController, labelText: 'Waist Circumference', keyboardType: TextInputType.number),
-                          _buildTextField(controller: _hipCircumferenceController, labelText: 'Hip Circumference', keyboardType: TextInputType.number),
-                          _buildTextField(controller: _chestCircumferenceController, labelText: 'Chest Circumference', keyboardType: TextInputType.number),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded( // Wrap Text with Expanded
-                            child: Text(
-                              'Daily Fitness Records',
-                              style: Theme.of(context).textTheme.headlineSmall,
-                            ),
-                          ),
-                          const SizedBox(width: 8), // Add some spacing
-                          Expanded( // Wrap ElevatedButton with Expanded
-                            child: ElevatedButton.icon(
-                              onPressed: _showAddDailyDataDialog,
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add Daily Data'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blueAccent,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            return Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Baseline Fitness Information',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildSectionCard(
+                          context,
+                          title: 'Preferences & Goals',
+                          children: [
+                            _buildTextField(controller: _likedExercisesController, labelText: 'Liked Exercises (comma-separated)'),
+                            _buildTextField(controller: _dislikedExercisesController, labelText: 'Disliked Exercises (comma-separated)'),
+                            _buildTextField(controller: _preferredWorkoutStyleController, labelText: 'Preferred Workout Style'),
+                            _buildTextField(controller: _physicalLimitationsController, labelText: 'Physical Limitations (comma-separated)'),
+                            _buildTextField(controller: _fitnessGoalsController, labelText: 'Fitness Goals (comma-separated)'),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildSectionCard(
+                          context,
+                          title: 'Body Measurements (cm)',
+                          children: [
+                            _buildTextField(controller: _waistCircumferenceController, labelText: 'Waist Circumference', keyboardType: TextInputType.number),
+                            _buildTextField(controller: _hipCircumferenceController, labelText: 'Hip Circumference', keyboardType: TextInputType.number),
+                            _buildTextField(controller: _chestCircumferenceController, labelText: 'Chest Circumference', keyboardType: TextInputType.number),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded( // Wrap Text with Expanded
+                              child: Text(
+                                'Daily Fitness Records',
+                                style: Theme.of(context).textTheme.headlineSmall,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      if (fitness.dailyDataHistory.isEmpty)
-                        const Center(child: Text('No daily fitness data recorded yet.'))
-                      else
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(), // Prevents nested scrolling issues
-                          itemCount: fitness.dailyDataHistory.length,
-                          itemBuilder: (context, index) {
-                            final data = fitness.dailyDataHistory[index];
-                            return _buildDailyDataCard(context, data);
-                          },
-                        ),
-                      const SizedBox(height: 80), // Space for buttons
-                    ],
-                  ),
-                ),
-              ),
-              // Confirm/Cancel buttons for fixed fitness info
-              if (isEditing)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    color: Colors.white.withOpacity(0.9),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _cancelFixedChanges,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            const SizedBox(width: 8), // Add some spacing
+                            Expanded( // Wrap ElevatedButton with Expanded
+                              child: ElevatedButton.icon(
+                                onPressed: _showAddDailyDataDialog,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add Daily Data'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
                             ),
-                            child: const Text('Cancel', style: TextStyle(fontSize: 16, color: Colors.white)),
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _saveFixedChanges,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.deepOrange,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            child: const Text('Confirm', style: TextStyle(fontSize: 16, color: Colors.white)),
+                        const SizedBox(height: 16),
+                        if (fitness.dailyDataHistory.isEmpty)
+                          const Center(child: Text('No daily fitness data recorded yet.'))
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(), // Prevents nested scrolling issues
+                            itemCount: fitness.dailyDataHistory.length,
+                            itemBuilder: (context, index) {
+                              final data = fitness.dailyDataHistory[index];
+                              return _buildDailyDataCard(context, data); // Pass data directly
+                            },
                           ),
-                        ),
+                        const SizedBox(height: 80), // Space for buttons
                       ],
                     ),
                   ),
                 ),
-            ],
-          );
-        }
-      },
-    );
+                // Confirm/Cancel buttons for fixed fitness info
+                if (isEditing)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      color: Colors.white.withOpacity(0.9),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _cancelFixedChanges,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Cancel', style: TextStyle(fontSize: 16, color: Colors.white)),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _saveFixedChanges,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepOrange,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Confirm', style: TextStyle(fontSize: 16, color: Colors.white)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          }
+        },
+      );
   }
 
   // Reusable section card widget
@@ -509,7 +547,7 @@ class _FitnessScreenState extends State<FitnessScreen> {
             Text('Date: ${data.date}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const Divider(height: 10, thickness: 0.5),
             _buildDataRow('Exercise:', data.exerciseItem),
-            _buildDataRow('Estimated Burn:', '${data.estimatedCalorieBurn.toStringAsFixed(1)} kcal'),
+            _buildDataRow('Estimated Burn:', '${data.estimatedCalorieBurn?.toStringAsFixed(1) ?? 'N/A'} kcal'), // Handle null
             if (data.fatLossArea != null && data.fatLossArea!.isNotEmpty)
               _buildDataRow('Fat Loss Area:', data.fatLossArea!),
             if (data.workoutDurationMinutes != null)
@@ -525,6 +563,7 @@ class _FitnessScreenState extends State<FitnessScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Strength Details:', style: TextStyle(fontWeight: FontWeight.w500)),
+                  // Correctly iterate and display strength training details
                   ...data.strengthTrainingDetails!.map((detail) => Padding(
                     padding: const EdgeInsets.only(left: 16.0),
                     child: Text('${detail['exercise']}: ${detail['sets']}x${detail['reps']} @ ${detail['weight']}kg'),
@@ -532,7 +571,7 @@ class _FitnessScreenState extends State<FitnessScreen> {
                 ],
               ),
             if (data.cardioDetails != null && data.cardioDetails!.isNotEmpty)
-              _buildDataRow('Cardio Details:', data.cardioDetails!['description'] ?? 'N/A'),
+              _buildDataRow('Cardio Details:', data.cardioDetails!['description'] ?? 'N/A'), // Access 'description' key
             if (data.userBodyStatus != null && data.userBodyStatus!.isNotEmpty)
               _buildDataRow('Body Status:', data.userBodyStatus!),
             if (data.feelingAfterWorkout != null && data.feelingAfterWorkout!.isNotEmpty)

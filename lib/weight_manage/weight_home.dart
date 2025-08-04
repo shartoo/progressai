@@ -9,9 +9,12 @@ import 'package:progressai/weight_manage/weight_chat.dart';
 
 class WeightHome extends StatefulWidget {
   final InferenceChat chatEngine;
+  final int? initialTabIndex; // 新增参数：初始选中的Tab索引
+
   const WeightHome({
     super.key,
     required this.chatEngine,
+    this.initialTabIndex, // 使其可选
   });
 
   @override
@@ -32,7 +35,11 @@ class _WeightHomeState extends State<WeightHome> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabTitles.length, vsync: this);
+    _tabController = TabController(
+      length: _tabTitles.length,
+      vsync: this,
+      initialIndex: widget.initialTabIndex ?? 0, // 使用传入的索引，默认为0
+    );
   }
 
   @override
@@ -43,7 +50,6 @@ class _WeightHomeState extends State<WeightHome> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    // 移除 ChangeNotifierProvider，它应该在更高层级提供
     return Scaffold(
       appBar: AppBar(
         title: const Text('Weight Management'),
@@ -69,7 +75,7 @@ class _WeightHomeState extends State<WeightHome> with SingleTickerProviderStateM
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [
+        children: const [ // 使用 const 确保这些屏幕是常量，优化性能
           // Basic Tab - User Profile Screen
           UserProfileScreen(),
           // Doctor Tab - Doctor Screen

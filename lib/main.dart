@@ -10,10 +10,10 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
   runApp(
-    // 在应用程序的根部提供 EditingStateProvider
+    // 将 ChangeNotifierProvider 直接包裹住 MaterialApp
     ChangeNotifierProvider(
       create: (context) => EditingStateProvider(),
-      child: const ProgressAIApp(),
+      child: const MyAppRoot(), // 新的根Widget，包含 MaterialApp
     ),
   );
 }
@@ -28,8 +28,10 @@ class EditingStateProvider extends ChangeNotifier {
     }
   }
 }
-class ProgressAIApp extends StatelessWidget {
-  const ProgressAIApp({super.key});
+
+// 创建一个新的根Widget来包含 MaterialApp
+class MyAppRoot extends StatelessWidget {
+  const MyAppRoot({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +43,7 @@ class ProgressAIApp extends StatelessWidget {
         fontFamily: 'Inter',
         scaffoldBackgroundColor: Colors.grey[50],
       ),
-      home: const MainScreen(),
+      home: const MainScreen(), // MainScreen 是应用程序的入口
     );
   }
 }

@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart'; // For state management
 import 'package:fl_chart/fl_chart.dart';
 
-import '../../main.dart';
+import '../../main.dart'; // 确保导入了 main.dart 以访问 EditingStateProvider
 import '../user_data.dart';
 
 class NutritionistScreen extends StatefulWidget {
@@ -236,6 +236,9 @@ class _NutritionistScreenState extends State<NutritionistScreen> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
+                setState(() { // <--- Add setState and reload data here
+                  _loadNutritionistData();
+                });
               },
               child: const Text('Cancel'),
             ),
@@ -299,133 +302,133 @@ class _NutritionistScreenState extends State<NutritionistScreen> {
   Widget build(BuildContext context) {
     final isEditing = Provider.of<EditingStateProvider>(context).isEditing;
 
-    return FutureBuilder<Nutritionist?>(
-      future: _nutritionistFuture, // Use the state variable future
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error loading nutritionist data: ${snapshot.error}'));
-        } else {
-          final nutritionist = snapshot.data!; // Use snapshot.data directly
+    return  FutureBuilder<Nutritionist?>(
+        future: _nutritionistFuture, // Use the state variable future
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error loading nutritionist data: ${snapshot.error}'));
+          } else {
+            final nutritionist = snapshot.data!; // Use snapshot.data directly
 
-          return Stack(
-            children: [
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Fixed Nutritional Information',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSectionCard(
-                        context,
-                        title: 'Dietary Habits & Preferences',
-                        children: [
-                          _buildTextField(controller: _dailyEatingPatternController, labelText: 'Daily Eating Pattern'),
-                          _buildTextField(controller: _cookingPreferenceController, labelText: 'Cooking Preference'),
-                          _buildTextField(controller: _dislikedFoodsController, labelText: 'Disliked Foods (comma-separated)'),
-                          _buildTextField(controller: _foodAllergiesController, labelText: 'Food Allergies (comma-separated)'),
-                          _buildTextField(controller: _eatingOutFrequencyController, labelText: 'Eating Out Frequency'),
-                          _buildTextField(controller: _alcoholConsumptionController, labelText: 'Alcohol Consumption'),
-                          _buildTextField(controller: _caffeineIntakeController, labelText: 'Caffeine Intake'),
-                          _buildTextField(controller: _possibleNutrientDeficienciesController, labelText: 'Possible Nutrient Deficiencies (comma-separated)'),
-                          _buildTextField(controller: _recommendedSupplementsController, labelText: 'Recommended Supplements (comma-separated)'),
-                          _buildTextField(controller: _digestiveHealthOverviewController, labelText: 'Digestive Health Overview'),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Daily Diet Records',
-                              style: Theme.of(context).textTheme.headlineSmall,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _showAddDailyDataDialog,
-                              icon: const Icon(Icons.add),
-                              label: const Text('Add Daily Data'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blueAccent,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            return Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Fixed Nutritional Information',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildSectionCard(
+                          context,
+                          title: 'Dietary Habits & Preferences',
+                          children: [
+                            _buildTextField(controller: _dailyEatingPatternController, labelText: 'Daily Eating Pattern'),
+                            _buildTextField(controller: _cookingPreferenceController, labelText: 'Cooking Preference'),
+                            _buildTextField(controller: _dislikedFoodsController, labelText: 'Disliked Foods (comma-separated)'),
+                            _buildTextField(controller: _foodAllergiesController, labelText: 'Food Allergies (comma-separated)'),
+                            _buildTextField(controller: _eatingOutFrequencyController, labelText: 'Eating Out Frequency'),
+                            _buildTextField(controller: _alcoholConsumptionController, labelText: 'Alcohol Consumption'),
+                            _buildTextField(controller: _caffeineIntakeController, labelText: 'Caffeine Intake'),
+                            _buildTextField(controller: _possibleNutrientDeficienciesController, labelText: 'Possible Nutrient Deficiencies (comma-separated)'),
+                            _buildTextField(controller: _recommendedSupplementsController, labelText: 'Recommended Supplements (comma-separated)'),
+                            _buildTextField(controller: _digestiveHealthOverviewController, labelText: 'Digestive Health Overview'),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Daily Diet Records',
+                                style: Theme.of(context).textTheme.headlineSmall,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      if (nutritionist.dailyDataHistory.isEmpty)
-                        const Center(child: Text('No daily diet data recorded yet.'))
-                      else
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: nutritionist.dailyDataHistory.length,
-                          itemBuilder: (context, index) {
-                            final data = nutritionist.dailyDataHistory[index];
-                            return _buildDailyDataCard(context, data, index); // Pass index for deletion
-                          },
-                        ),
-                      const SizedBox(height: 80), // Space for buttons
-                    ],
-                  ),
-                ),
-              ),
-              // Confirm/Cancel buttons for fixed nutritional info
-              if (isEditing)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    color: Colors.white.withOpacity(0.9),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _cancelFixedChanges,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _showAddDailyDataDialog,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add Daily Data'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
                             ),
-                            child: const Text('Cancel', style: TextStyle(fontSize: 16, color: Colors.white)),
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _saveFixedChanges,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.deepOrange,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            child: const Text('Confirm', style: TextStyle(fontSize: 16, color: Colors.white)),
+                        const SizedBox(height: 16),
+                        if (nutritionist.dailyDataHistory.isEmpty)
+                          const Center(child: Text('No daily diet data recorded yet.'))
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: nutritionist.dailyDataHistory.length,
+                            itemBuilder: (context, index) {
+                              final data = nutritionist.dailyDataHistory[index];
+                              return _buildDailyDataCard(context, data, index); // Pass index for deletion
+                            },
                           ),
-                        ),
+                        const SizedBox(height: 80), // Space for buttons
                       ],
                     ),
                   ),
                 ),
-            ],
-          );
-        }
-      },
-    );
+                // Confirm/Cancel buttons for fixed nutritional info
+                if (isEditing)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      color: Colors.white.withOpacity(0.9),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _cancelFixedChanges,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Cancel', style: TextStyle(fontSize: 16, color: Colors.white)),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _saveFixedChanges,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepOrange,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Confirm', style: TextStyle(fontSize: 16, color: Colors.white)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          }
+        },
+      );
   }
 
   // Reusable section card widget
