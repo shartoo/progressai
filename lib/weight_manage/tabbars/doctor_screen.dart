@@ -53,10 +53,10 @@ class _DoctorScreenState extends State<DoctorScreen> {
       _allergyMedicationsController = TextEditingController(text: doctorData.allergyMedications.join(', '));
       _currentMedicationsController = TextEditingController(text: doctorData.currentMedications.join(', '));
       _existingMedicalConditionsController = TextEditingController(text: doctorData.existingMedicalConditions.join(', '));
-      _bloodLipidTotalCholesterolController = TextEditingController(text: doctorData.bloodLipidProfile?['总胆固醇']?.toString() ?? '');
-      _bloodLipidLDLController = TextEditingController(text: doctorData.bloodLipidProfile?['低密度脂蛋白']?.toString() ?? '');
-      _bloodLipidHDLController = TextEditingController(text: doctorData.bloodLipidProfile?['高密度脂蛋白']?.toString() ?? '');
-      _bloodLipidTriglyceridesController = TextEditingController(text: doctorData.bloodLipidProfile?['甘油三酯']?.toString() ?? '');
+      _bloodLipidTotalCholesterolController = TextEditingController(text: doctorData.bloodLipidProfile?['Total Cholesterol']?.toString() ?? '');
+      _bloodLipidLDLController = TextEditingController(text: doctorData.bloodLipidProfile?['LDL']?.toString() ?? '');
+      _bloodLipidHDLController = TextEditingController(text: doctorData.bloodLipidProfile?['HDL']?.toString() ?? '');
+      _bloodLipidTriglyceridesController = TextEditingController(text: doctorData.bloodLipidProfile?['Triglycerides']?.toString() ?? '');
       _thyroidFunctionController = TextEditingController(text: doctorData.thyroidFunction ?? '');
       _liverKidneyFunctionController = TextEditingController(text: doctorData.liverKidneyFunction ?? '');
 
@@ -127,10 +127,10 @@ class _DoctorScreenState extends State<DoctorScreen> {
       currentMedications: _currentMedicationsController.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
       existingMedicalConditions: _existingMedicalConditionsController.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
       bloodLipidProfile: {
-        "总胆固醇": double.tryParse(_bloodLipidTotalCholesterolController.text) ?? 0.0,
-        "低密度脂蛋白": double.tryParse(_bloodLipidLDLController.text) ?? 0.0,
-        "高密度脂蛋白": double.tryParse(_bloodLipidHDLController.text) ?? 0.0,
-        "甘油三酯": double.tryParse(_bloodLipidTriglyceridesController.text) ?? 0.0,
+        "Total Cholesterol": double.tryParse(_bloodLipidTotalCholesterolController.text) ?? 0.0,
+        "LDL": double.tryParse(_bloodLipidLDLController.text) ?? 0.0,
+        "HDL": double.tryParse(_bloodLipidHDLController.text) ?? 0.0,
+        "Triglycerides": double.tryParse(_bloodLipidTriglyceridesController.text) ?? 0.0,
       },
       thyroidFunction: _thyroidFunctionController.text,
       liverKidneyFunction: _liverKidneyFunctionController.text,
@@ -182,7 +182,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
         print('Error accessing EditingStateProvider in _saveFixedChanges: $e');
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('医疗信息已保存！')),
+        const SnackBar(content: Text('basic data updated！')),
       );
       // Reload data to ensure FutureBuilder rebuilds
       setState(() {
@@ -282,7 +282,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
                     await AppModelsManager.saveData();
                     Navigator.of(dialogContext).pop(); // 使用 dialogContext
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('每日数据已添加！')),
+                      const SnackBar(content: Text('Daily data add！')),
                     );
                     // Reload data to ensure FutureBuilder rebuilds
                     setState(() {
@@ -311,7 +311,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
     });
     await AppModelsManager.saveData();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('每日医疗记录已删除！')),
+      const SnackBar(content: Text('Daily data removed！')),
     );
     // Reload data to ensure FutureBuilder rebuilds
     setState(() {

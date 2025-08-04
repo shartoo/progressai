@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart'; // For state management
+import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-import '../../main.dart'; // 确保导入了 main.dart 以访问 EditingStateProvider
+import '../../main.dart';
 import '../user_data.dart';
 
 class NutritionistScreen extends StatefulWidget {
@@ -251,11 +251,11 @@ class _NutritionistScreenState extends State<NutritionistScreen> {
                     imageUrl: _imageUrlController.text.isNotEmpty ? _imageUrlController.text : '',
                     foodNutritionSummary: _foodNutritionSummaryController.text.isNotEmpty ? _foodNutritionSummaryController.text : null,
                     foodMetricsData: {
-                      "蛋白质": double.tryParse(_proteinController.text) ?? 0.0,
-                      "脂肪": double.tryParse(_fatController.text) ?? 0.0,
-                      "能量": double.tryParse(_energyController.text) ?? 0.0,
-                      "碳水": double.tryParse(_carbController.text) ?? 0.0,
-                      "其他": double.tryParse(_otherMetricsController.text) ?? 0.0,
+                      "protein": double.tryParse(_proteinController.text) ?? 0.0,
+                      "fat": double.tryParse(_fatController.text) ?? 0.0,
+                      "energy": double.tryParse(_energyController.text) ?? 0.0,
+                      "carbon": double.tryParse(_carbController.text) ?? 0.0,
+                      "other": double.tryParse(_otherMetricsController.text) ?? 0.0,
                     },
                   );
 
@@ -290,7 +290,7 @@ class _NutritionistScreenState extends State<NutritionistScreen> {
     });
     await AppModelsManager.saveData();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('每日饮食记录已删除！')),
+      const SnackBar(content: Text('Daily data add！')),
     );
     // Reload data to ensure FutureBuilder rebuilds
     setState(() {
@@ -560,7 +560,7 @@ class _NutritionistScreenState extends State<NutritionistScreen> {
                             errorBuilder: (context, error, stackTrace) =>
                             const Icon(Icons.broken_image, size: 50, color: Colors.grey),
                           )
-                              : const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                              : Image.asset('assets/food.jpg'), // const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
                         ],
                       ),
                     ),
@@ -591,25 +591,25 @@ class _NutritionistScreenState extends State<NutritionistScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8.0,
-                            runSpacing: 4.0,
-                            children: data.foodMetricsData.entries.map((entry) {
-                              final int colorIndex = data.foodMetricsData.keys.toList().indexOf(entry.key);
-                              return Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 10,
-                                    height: 10,
-                                    color: pieColors[colorIndex % pieColors.length],
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text('${entry.key}: ${entry.value.toStringAsFixed(1)}'),
-                                ],
-                              );
-                            }).toList(),
-                          ),
+                          // Wrap(
+                          //   spacing: 8.0,
+                          //   runSpacing: 4.0,
+                          //   children: data.foodMetricsData.entries.map((entry) {
+                          //     final int colorIndex = data.foodMetricsData.keys.toList().indexOf(entry.key);
+                          //     return Row(
+                          //       mainAxisSize: MainAxisSize.min,
+                          //       children: [
+                          //         Container(
+                          //           width: 10,
+                          //           height: 10,
+                          //           color: pieColors[colorIndex % pieColors.length],
+                          //         ),
+                          //         const SizedBox(width: 4),
+                          //         Text('${entry.key}: ${entry.value.toStringAsFixed(1)}'),
+                          //       ],
+                          //     );
+                          //   }).toList(),
+                          // ),
                         ],
                       ),
                     ),

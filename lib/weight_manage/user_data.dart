@@ -26,7 +26,7 @@ class UserProfile {
   String longTermGoalsDescription;
   String startDate;
   String bodyShape;
-  List<WeightEntry> weightHistory; // Added: 体重历史列表
+  List<WeightEntry> weightHistory; // Added: Weight history list
 
   UserProfile({
     required this.age,
@@ -167,13 +167,13 @@ class WeightEntry {
 
 // Doctor DataClass
 class Doctor {
-  final List<String> allergyMedications; // 过敏药物
-  final List<String> currentMedications; // 正在服用的药物
-  final List<String> existingMedicalConditions; // 现有疾病 (例如: "高血压", "糖尿病")
-  final Map<String, double>? bloodLipidProfile; // 血脂水平 (例如: {"Total Cholesterol": 200.0, "LDL": 100.0, "HDL": 45.0, "Triglycerides": 150.0})
-  final String? thyroidFunction; // 甲状腺功能 (例如: "正常", "甲减", "甲亢")
-  final String? liverKidneyFunction; // 肝肾功能概述 (例如: "正常", "ALT偏高")
-  final List<DoctorDailyData> dailyDataHistory; // 每日数据历史
+  final List<String> allergyMedications; // Allergic medications
+  final List<String> currentMedications; // Current medications
+  final List<String> existingMedicalConditions; // Existing medical conditions (e.g., "Hypertension", "Diabetes")
+  final Map<String, double>? bloodLipidProfile; // Blood lipid profile (e.g., {"Total Cholesterol": 200.0, "LDL": 100.0, "HDL": 45.0, "Triglycerides": 150.0})
+  final String? thyroidFunction; // Thyroid function (e.g., "Normal", "Hypothyroidism", "Hyperthyroidism")
+  final String? liverKidneyFunction; // Liver and kidney function overview (e.g., "Normal", "ALT high")
+  final List<DoctorDailyData> dailyDataHistory; // Daily data history
 
   Doctor({
     this.allergyMedications = const [],
@@ -185,7 +185,7 @@ class Doctor {
     this.dailyDataHistory = const [],
   });
 
-  // 将Doctor对象转换为JSON兼容的Map
+  // Convert Doctor object to a JSON-compatible Map
   Map<String, dynamic> toJson() {
     return {
       "allergy_medications": allergyMedications,
@@ -198,7 +198,7 @@ class Doctor {
     };
   }
 
-  // 从JSON Map创建Doctor对象
+  // Create Doctor object from a JSON Map
   factory Doctor.fromJson(Map<String, dynamic> json) {
     return Doctor(
       allergyMedications: List<String>.from(json['allergy_medications'] as List? ?? []),
@@ -214,25 +214,25 @@ class Doctor {
     );
   }
 
-  // 用于初始化的默认医生资料 (现在是用户的默认医疗信息)
+  // Default doctor profile for initialization (now the user's default medical info)
   static Doctor defaultDoctor() {
     return Doctor(
-      allergyMedications: ["无"],
-      currentMedications: ["无"],
-      existingMedicalConditions: ["无"],
-      bloodLipidProfile: {"总胆固醇": 180.0, "低密度脂蛋白": 90.0, "高密度脂蛋白": 50.0, "甘油三酯": 100.0},
-      thyroidFunction: "正常",
-      liverKidneyFunction: "正常",
+      allergyMedications: ["None"],
+      currentMedications: ["None"],
+      existingMedicalConditions: ["None"],
+      bloodLipidProfile: {"Total Cholesterol": 180.0, "LDL": 90.0, "HDL": 50.0, "Triglycerides": 100.0},
+      thyroidFunction: "Normal",
+      liverKidneyFunction: "Normal",
       dailyDataHistory: [
         DoctorDailyData(
           date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
           bloodGlucose: 90.0,
           bloodPressure: "110/70",
-          bodyStatus: "感觉良好，精力充沛。",
-          sleepQuality: "良好",
+          bodyStatus: "Feeling good, energetic.",
+          sleepQuality: "Good",
           waterIntakeMl: 2000.0,
-          bowelMovementStatus: "正常",
-          medicationAdherence: "已服药",
+          bowelMovementStatus: "Normal",
+          medicationAdherence: "Medication taken",
           symptoms: [],
         ),
       ],
@@ -240,17 +240,17 @@ class Doctor {
   }
 }
 
-// 医生每日数据条目数据类
+// Doctor's daily data entry data class
 class DoctorDailyData {
-  final String date; // 格式: 'yyyy-MM-dd'
-  final double? bloodGlucose; // 每日血糖
-  final String? bloodPressure; // 每日血压 (例如: "120/80")
-  final String? bodyStatus; // 身体状态描述 (例如: "感觉良好", "轻微疲劳")
-  final String? sleepQuality; // 睡眠质量 (例如: "良好", "一般", "差")
-  final double? waterIntakeMl; // 饮水量 (毫升)
-  final String? bowelMovementStatus; // 排便情况 (例如: "正常", "便秘", "腹泻")
-  final String? medicationAdherence; // 服药依从性 (例如: "已服药", "漏服", "未服")
-  final List<String> symptoms; // 记录的症状 (例如: ["头痛", "轻微恶心"])
+  final String date; // Format: 'yyyy-MM-dd'
+  final double? bloodGlucose; // Daily blood glucose
+  final String? bloodPressure; // Daily blood pressure (e.g., "120/80")
+  final String? bodyStatus; // Body status description (e.g., "Feeling good", "Slightly tired")
+  final String? sleepQuality; // Sleep quality (e.g., "Good", "Fair", "Poor")
+  final double? waterIntakeMl; // Water intake (ml)
+  final String? bowelMovementStatus; // Bowel movement status (e.g., "Normal", "Constipation", "Diarrhea")
+  final String? medicationAdherence; // Medication adherence (e.g., "Medication taken", "Missed a dose", "No medication taken")
+  final List<String> symptoms; // Recorded symptoms (e.g., ["Headache", "Slight nausea"])
 
   DoctorDailyData({
     required this.date,
@@ -294,36 +294,36 @@ class DoctorDailyData {
 }
 // Nutritionist DataClass
 class Nutritionist {
-  // 固定信息
-  final String dailyEatingPattern; // 日常饮食模式
-  final String cookingPreference; // 烹饪方式偏好
-  final List<String> dislikedFoods; // 不喜欢吃的食物
-  final List<String> foodAllergies; // 食物过敏
-  final String eatingOutFrequency; // 外出就餐频率
-  final String alcoholConsumption; // 饮酒习惯
-  final String caffeineIntake; // 咖啡因摄入
-  final List<String> possibleNutrientDeficiencies; // 可能的营养缺失
-  final List<String> recommendedSupplements; // 需要补充的药剂
-  final String digestiveHealthOverview; // 消化系统健康概述
+  // Fixed attributes
+  final String dailyEatingPattern; // Daily eating pattern
+  final String cookingPreference; // Cooking preference
+  final List<String> dislikedFoods; // Disliked foods
+  final List<String> foodAllergies; // Food allergies
+  final String eatingOutFrequency; // Eating out frequency
+  final String alcoholConsumption; // Alcohol consumption
+  final String caffeineIntake; // Caffeine intake
+  final List<String> possibleNutrientDeficiencies; // Possible nutrient deficiencies
+  final List<String> recommendedSupplements; // Recommended supplements
+  final String digestiveHealthOverview; // Digestive health overview
 
-  // 每日数据历史
+  // Daily data history
   final List<NutritionistDailyData> dailyDataHistory;
 
   Nutritionist({
-    this.dailyEatingPattern = "一日三餐规律",
-    this.cookingPreference = "蒸煮",
+    this.dailyEatingPattern = "Three regular meals a day",
+    this.cookingPreference = "Steaming and boiling",
     this.dislikedFoods = const [],
     this.foodAllergies = const [],
-    this.eatingOutFrequency = "每周1-2次",
-    this.alcoholConsumption = "无",
-    this.caffeineIntake = "每日1杯咖啡",
+    this.eatingOutFrequency = "1-2 times a week",
+    this.alcoholConsumption = "None",
+    this.caffeineIntake = "1 cup of coffee daily",
     this.possibleNutrientDeficiencies = const [],
     this.recommendedSupplements = const [],
-    this.digestiveHealthOverview = "正常",
+    this.digestiveHealthOverview = "Normal",
     this.dailyDataHistory = const [],
   });
 
-  // 将Nutritionist对象转换为JSON兼容的Map
+  // Convert Nutritionist object to a JSON-compatible Map
   Map<String, dynamic> toJson() {
     return {
       "daily_eating_pattern": dailyEatingPattern,
@@ -340,19 +340,19 @@ class Nutritionist {
     };
   }
 
-  // 从JSON Map创建Nutritionist对象
+  // Create Nutritionist object from a JSON Map
   factory Nutritionist.fromJson(Map<String, dynamic> json) {
     return Nutritionist(
-      dailyEatingPattern: json['daily_eating_pattern'] as String? ?? "一日三餐规律",
-      cookingPreference: json['cooking_preference'] as String? ?? "蒸煮",
+      dailyEatingPattern: json['daily_eating_pattern'] as String? ?? "Three regular meals a day",
+      cookingPreference: json['cooking_preference'] as String? ?? "Steaming and boiling",
       dislikedFoods: List<String>.from(json['disliked_foods'] as List? ?? []),
       foodAllergies: List<String>.from(json['food_allergies'] as List? ?? []),
-      eatingOutFrequency: json['eating_out_frequency'] as String? ?? "每周1-2次",
-      alcoholConsumption: json['alcohol_consumption'] as String? ?? "无",
-      caffeineIntake: json['caffeine_intake'] as String? ?? "每日1杯咖啡",
+      eatingOutFrequency: json['eating_out_frequency'] as String? ?? "1-2 times a week",
+      alcoholConsumption: json['alcohol_consumption'] as String? ?? "None",
+      caffeineIntake: json['caffeine_intake'] as String? ?? "1 cup of coffee daily",
       possibleNutrientDeficiencies: List<String>.from(json['possible_nutrient_deficiencies'] as List? ?? []),
       recommendedSupplements: List<String>.from(json['recommended_supplements'] as List? ?? []),
-      digestiveHealthOverview: json['digestive_health_overview'] as String? ?? "正常",
+      digestiveHealthOverview: json['digestive_health_overview'] as String? ?? "Normal",
       dailyDataHistory: (json['daily_data_history'] as List<dynamic>?)
           ?.map((e) => NutritionistDailyData.fromJson(e as Map<String, dynamic>))
           .toList() ??
@@ -360,51 +360,51 @@ class Nutritionist {
     );
   }
 
-  // 用于初始化的默认营养师资料 (用户的默认营养信息)
+  // Default nutritionist profile for initialization (user's default nutrition info)
   static Nutritionist defaultNutritionist() {
     return Nutritionist(
-      dailyEatingPattern: "一日三餐规律，少量加餐",
-      cookingPreference: "蒸煮为主，偶尔烤",
-      dislikedFoods: ["香菜", "肥肉"],
-      foodAllergies: ["无"],
-      eatingOutFrequency: "每周1次",
-      alcoholConsumption: "偶尔小酌",
-      caffeineIntake: "每日1杯咖啡",
-      possibleNutrientDeficiencies: ["维生素D", "钙"],
-      recommendedSupplements: ["维生素D3", "钙片"],
-      digestiveHealthOverview: "正常，偶尔轻微腹胀",
+      dailyEatingPattern: "Three regular meals a day, with small snacks.",
+      cookingPreference: "Primarily steaming and boiling, occasionally baking.",
+      dislikedFoods: ["Cilantro", "Fatty meat"],
+      foodAllergies: ["None"],
+      eatingOutFrequency: "Once a week",
+      alcoholConsumption: "Occasional light drinking",
+      caffeineIntake: "1 cup of coffee daily",
+      possibleNutrientDeficiencies: ["Vitamin D", "Calcium"],
+      recommendedSupplements: ["Vitamin D3", "Calcium tablets"],
+      digestiveHealthOverview: "Normal, occasional mild bloating",
       dailyDataHistory: [
         NutritionistDailyData(
           date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-          mealCategory: "早餐",
+          mealCategory: "Breakfast",
           imageUrl: "",
-          foodNutritionSummary: "燕麦粥加水果，营养均衡。",
-          foodMetricsData: {"蛋白质": 15.0, "脂肪": 10.0, "能量": 350.0, "碳水": 50.0, "其他": 5.0},
+          foodNutritionSummary: "Oatmeal with fruit, nutritionally balanced.",
+          foodMetricsData: {"Protein": 15.0, "Fat": 10.0, "Energy": 350.0, "Carbs": 50.0, "Other": 5.0},
         ),
         NutritionistDailyData(
           date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-          mealCategory: "午餐",
+          mealCategory: "Lunch",
           imageUrl: "",
-          foodNutritionSummary: "鸡胸肉沙拉，高蛋白低脂。",
-          foodMetricsData: {"蛋白质": 30.0, "脂肪": 15.0, "能量": 450.0, "碳水": 20.0, "其他": 10.0},
+          foodNutritionSummary: "Chicken breast salad, high protein, low fat.",
+          foodMetricsData: {"Protein": 30.0, "Fat": 15.0, "Energy": 450.0, "Carbs": 20.0, "Other": 10.0},
         ),
       ],
     );
   }
 }
 
-// 营养师每日数据条目数据类
+// Nutritionist daily data entry data class
 class NutritionistDailyData {
-  final String date; // 格式: 'yyyy-MM-dd'
-  final String mealCategory; // 用餐类别: 早/中午/晚餐/零食
-  final String? imageUrl; // 用餐食物图片地址: 默认为空白字符串
-  final String? foodNutritionSummary; // 食物营养总结: 一段文字描述这次食物
-  final Map<String, double> foodMetricsData; // 食物中各个指标数据 : 蛋白质,脂肪,能量,碳水,其他
+  final String date;
+  final String mealCategory;
+  final String? imageUrl;
+  final String? foodNutritionSummary;
+  final Map<String, double> foodMetricsData;
 
   NutritionistDailyData({
     required this.date,
     required this.mealCategory,
-    this.imageUrl = "", // 默认为空白字符串
+    this.imageUrl = "",
     this.foodNutritionSummary,
     required this.foodMetricsData,
   });
@@ -431,30 +431,30 @@ class NutritionistDailyData {
 }
 // Fitness DataClass
 
-// 健身数据类 (记录用户的健身信息)
+// Fitness Data Class (records the user's fitness information)
 class Fitness {
-  // 固定信息
-  final Map<String, double> bodyMeasurements; // 身体围度测量 (例如: {"腰围": 75.0, "臀围": 90.0, "胸围": 85.0})
-  final List<String> likedExercises; // 喜欢的运动
-  final List<String> dislikedExercises; // 不喜欢的运动
-  final String preferredWorkoutStyle; // 偏好的运动风格
-  final List<String> physicalLimitations; // 身体旧伤
-  final List<String> fitnessGoals; // 健身目标
+  // Fixed attributes
+  final Map<String, double> bodyMeasurements; // Body measurements (e.g., {"Waist": 75.0, "Hips": 90.0, "Chest": 85.0})
+  final List<String> likedExercises;
+  final List<String> dislikedExercises;
+  final String preferredWorkoutStyle;
+  final List<String> physicalLimitations;
+  final List<String> fitnessGoals;
 
-  // 每日数据历史
+  // Daily data history
   final List<FitnessDailyData> dailyDataHistory;
 
   Fitness({
     this.bodyMeasurements = const {},
     this.likedExercises = const [],
     this.dislikedExercises = const [],
-    this.preferredWorkoutStyle = "混合训练",
+    this.preferredWorkoutStyle = "mix training",
     this.physicalLimitations = const [],
     this.fitnessGoals = const [],
     this.dailyDataHistory = const [],
   });
 
-  // 将Fitness对象转换为JSON兼容的Map
+  // Convert Fitness object to a JSON-compatible Map
   Map<String, dynamic> toJson() {
     return {
       "body_measurements": bodyMeasurements,
@@ -467,13 +467,13 @@ class Fitness {
     };
   }
 
-  // 从JSON Map创建Fitness对象
+  // Create Fitness object from a JSON Map
   factory Fitness.fromJson(Map<String, dynamic> json) {
     return Fitness(
       bodyMeasurements: Map<String, double>.from(json['body_measurements'] as Map? ?? {}),
       likedExercises: List<String>.from(json['liked_exercises'] as List? ?? []),
       dislikedExercises: List<String>.from(json['disliked_exercises'] as List? ?? []),
-      preferredWorkoutStyle: json['preferred_workout_style'] as String? ?? "混合训练",
+      preferredWorkoutStyle: json['preferred_workout_style'] as String? ?? "Hybrid training",
       physicalLimitations: List<String>.from(json['physical_limitations'] as List? ?? []),
       fitnessGoals: List<String>.from(json['fitness_goals'] as List? ?? []),
       dailyDataHistory: (json['daily_data_history'] as List<dynamic>?)
@@ -483,56 +483,56 @@ class Fitness {
     );
   }
 
-  // 用于初始化的默认健身资料 (用户的默认健身信息)
+  // Default fitness profile for initialization (user's default fitness info)
   static Fitness defaultFitness() {
     return Fitness(
-      bodyMeasurements: {"腰围": 75.0, "臀围": 90.0, "胸围": 85.0},
-      likedExercises: ["力量训练", "游泳", "瑜伽", "普拉提"],
-      dislikedExercises: ["长跑"],
-      preferredWorkoutStyle: "高强度间歇训练",
-      physicalLimitations: ["膝盖痛"],
-      fitnessGoals: ["减肥", "锻炼手臂肌肉"],
+      bodyMeasurements: {"Waist": 75.0, "Hips": 90.0, "Chest": 85.0},
+      likedExercises: ["Strength training", "Swimming", "Yoga", "Pilates"],
+      dislikedExercises: ["Long-distance running"],
+      preferredWorkoutStyle: "High-intensity interval training",
+      physicalLimitations: ["Knee pain"],
+      fitnessGoals: ["Weight loss", "Build arm muscles"],
       dailyDataHistory: [
         FitnessDailyData(
           date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-          exerciseItem: "力量训练 (全身)",
+          exerciseItem: "Strength Training (Full Body)",
           estimatedCalorieBurn: 400.0,
-          fatLossArea: "全身",
+          fatLossArea: "Full body",
           workoutDurationMinutes: 60,
-          intensityLevel: "中高",
-          exerciseSummary: "完成了计划的所有组数和次数，状态不错。",
+          intensityLevel: "Medium-high",
+          exerciseSummary: "Completed all sets and reps as planned, feeling good.",
           averageHeartRate: 140.0,
           peakHeartRate: 165.0,
           strengthTrainingDetails: [
-            {"exercise": "深蹲", "sets": 3, "reps": 8, "weight": 60.0},
-            {"exercise": "卧推", "sets": 3, "reps": 8, "weight": 40.0},
+            {"exercise": "Squats", "sets": 3, "reps": 8, "weight": 60.0},
+            {"exercise": "Bench Press", "sets": 3, "reps": 8, "weight": 40.0},
           ],
-          cardioDetails: null, // 没有有氧训练
-          userBodyStatus: "感觉良好，肌肉有泵感。",
-          feelingAfterWorkout: "精力充沛",
-          recoveryStatus: "轻微肌肉酸痛",
+          cardioDetails: null, // No cardio training
+          userBodyStatus: "Feeling good, muscles are pumped.",
+          feelingAfterWorkout: "Energetic",
+          recoveryStatus: "Slight muscle soreness",
         ),
       ],
     );
   }
 }
 
-// 健身每日数据条目数据类
+// Fitness daily data entry data class
 class FitnessDailyData {
-  final String date; // 格式: 'yyyy-MM-dd'
-  final String exerciseItem; // 运动项目
-  final double estimatedCalorieBurn; // 预估热量消耗
-  final String? fatLossArea; // 脂肪消耗部位
-  final int? workoutDurationMinutes; // 运动时长 (分钟)
-  final String? intensityLevel; // 运动强度 (例如: 低, 中, 高)
-  final String? exerciseSummary; // 运动小结
-  final double? averageHeartRate; // 运动过程中的平均心率
-  final double? peakHeartRate; // 运动过程中的峰值心率
-  final List<Map<String, dynamic>>? strengthTrainingDetails; // 力量训练细节 (例如: [{"exercise": "深蹲", "sets": 3, "reps": 8, "weight": 60.0}])
-  final Map<String, dynamic>? cardioDetails; // 有氧训练细节 (例如: {"distanceKm": 5.0, "paceMinPerKm": 6.0})
-  final String? userBodyStatus; // 用户身体状态 (例如: "感觉强壮，精力充沛。")
-  final String? feelingAfterWorkout; // 运动后的感受 (例如: "精力充沛", "疲惫", "酸痛")
-  final String? recoveryStatus; // 恢复状态 (例如: "肌肉酸痛", "睡眠质量影响")
+  final String date; // Format: 'yyyy-MM-dd'
+  final String exerciseItem; // Exercise item
+  final double estimatedCalorieBurn; // Estimated calorie burn
+  final String? fatLossArea; // Fat loss area
+  final int? workoutDurationMinutes; // Workout duration (minutes)
+  final String? intensityLevel; // Workout intensity (e.g., Low, Medium, High)
+  final String? exerciseSummary; // Workout summary
+  final double? averageHeartRate; // Average heart rate during exercise
+  final double? peakHeartRate; // Peak heart rate during exercise
+  final List<Map<String, dynamic>>? strengthTrainingDetails; // Strength training details (e.g., [{"exercise": "Squats", "sets": 3, "reps": 8, "weight": 60.0}])
+  final Map<String, dynamic>? cardioDetails; // Cardio training details (e.g., {"distanceKm": 5.0, "paceMinPerKm": 6.0})
+  final String? userBodyStatus; // User body status (e.g., "Feeling strong, energetic.")
+  final String? feelingAfterWorkout; // Feeling after workout (e.g., "Energetic", "Tired", "Sore")
+  final String? recoveryStatus; // Recovery status (e.g., "Muscle soreness", "Sleep quality affected")
 
   FitnessDailyData({
     required this.date,

@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gemma/core/chat.dart';
 import 'package:progressai/reading_book/role_map.dart';
+
+import 'book_chat.dart';
 import 'book_list.dart';
-import 'mind_map.dart'; // 导入思维导图界面
+import 'mind_map.dart'; // 导入 chatEngine 所需的类型
 
 class BookDetailScreen extends StatefulWidget {
   final Book book; // 接收传入的书籍对象
-  const BookDetailScreen({Key? key, required this.book}) : super(key: key);
+  final InferenceChat chatEngine; // 新增：接收 chatEngine
+
+  const BookDetailScreen({Key? key, required this.book, required this.chatEngine}) : super(key: key);
+
   @override
   State<BookDetailScreen> createState() => _BookDetailScreenState();
 }
 
 class _BookDetailScreenState extends State<BookDetailScreen> {
   String _bookContent = ''; // 用于存储书籍的完整内容
+
   @override
   void initState() {
     super.initState();
@@ -26,12 +33,28 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
     });
   }
 
+  // 导航到书籍聊天界面
+  void _navigateToBookChat() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BookChatScreen(
+          bookTitle: widget.book.title,
+          contentFilePath: widget.book.contentFilePath,
+          chatEngine: widget.chatEngine, // 传递 chatEngine
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // 计算阅读进度文本
-    final int currentPage = (widget.book.progress / 100 * 384).toInt(); // 假设总页数为384
-    final int bookPageNum = widget.book.pageNum;
-    final String progressText = 'progress: $currentPage/$bookPageNum';
+    // 假设总页数为 book.pageNum，如果为0则默认为1
+    final int totalPages = widget.book.pageNum > 0 ? widget.book.pageNum : 1;
+    final int currentPage = (widget.book.progress / 100 * totalPages).toInt();
+    final String progressText = 'Progress: $currentPage/$totalPages';
+
 
     return Scaffold(
       appBar: AppBar(
@@ -45,7 +68,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
           IconButton(
             icon: const Icon(Icons.bookmark_border, color: Colors.black), // 书签图标
             onPressed: () {
-              // TODO: 实现书签功能
+              // TODO: Implement bookmark functionality
             },
           ),
         ],
@@ -65,34 +88,38 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // 书籍封面
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        spreadRadius: 3,
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
+                // 书籍封面 (现在可点击)
+                InkWell( // 使用 InkWell 使其可点击并提供视觉反馈
+                  onTap: _navigateToBookChat, // 点击时跳转到聊天界面
+                  borderRadius: BorderRadius.circular(12), // 保持圆角
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          spreadRadius: 3,
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        widget.book.coverImage,
+                        width: 180,
+                        height: 270,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 180,
+                            height: 270,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.book, size: 80, color: Colors.grey),
+                          );
+                        },
                       ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      widget.book.coverImage,
-                      width: 180,
-                      height: 270,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 180,
-                          height: 270,
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.book, size: 80, color: Colors.grey),
-                        );
-                      },
                     ),
                   ),
                 ),
@@ -138,21 +165,39 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                     color: Colors.grey[600],
                   ),
                 ),
+                const SizedBox(height: 16), // 增加间距
+                // 新增：Read 按钮
+                ElevatedButton.icon(
+                  onPressed: _navigateToBookChat, // 点击时跳转到聊天界面
+                  icon: const Icon(Icons.menu_book, color: Colors.white),
+                  label: const Text(
+                    'Read Book',
+                    style: TextStyle(fontSize: 18, color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepOrange, // 按钮颜色
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30), // 圆角按钮
+                    ),
+                    elevation: 5,
+                  ),
+                ),
                 const SizedBox(height: 30),
 
-                // 思维导图缩略图卡片
+                // Mind Map Card
                 _buildFeatureCard(
                   context,
                   title: 'Mind Map',
                   icon: Icons.psychology_alt,
-                  color: Colors.lightGreen, // 绿色调
+                  color: Colors.lightGreen, // Green tone
                   onTap: () {
-                    // 或者从缓存中读取已生成的JSON
+                    // Navigate to MindMapScreen, passing mindMapData
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => MindMapScreen(
-                          jsonMindMapData: widget.book.mindMapData.isEmpty ? '' : widget.book.mindMapData, // 传递书籍内容或空字符串
+                          jsonMindMapData: widget.book.mindMapData, // Pass the stored mind map data
                           bookTitle: widget.book.title,
                         ),
                       ),
@@ -161,28 +206,26 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // 人物关系图谱缩略图卡片
+                // Role Map Card
                 _buildFeatureCard(
                   context,
                   title: 'Role Map',
                   icon: Icons.people_alt,
-                  color: Colors.orangeAccent, // 橙色调
+                  color: Colors.orangeAccent, // Orange tone
                   onTap: () {
+                    // Navigate to RoleMapScreen, passing roleMapData
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => RoleMapScreen(
-                          jsonRoleMapData: widget.book.roleMapData.isEmpty ? '' : widget.book.roleMapData,
+                          jsonRoleMapData: widget.book.roleMapData, // Pass the stored role map data
                           bookTitle: widget.book.title,
                         ),
                       ),
                     );
-                    // ScaffoldMessenger.of(context).showSnackBar(
-                    //   const SnackBar(content: Text('人物关系图谱功能待开发')),
-                    // );
                   },
                 ),
-                const SizedBox(height: 30), // 底部留白
+                const SizedBox(height: 30), // Bottom padding
               ],
             ),
           ),
@@ -191,7 +234,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
     );
   }
 
-  // 构建特性卡片（思维导图和人物关系图谱）
+  // Build feature card (Mind Map and Role Map)
   Widget _buildFeatureCard(BuildContext context, {
     required String title,
     required IconData icon,
@@ -201,11 +244,11 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.85, // 宽度占屏幕的85%
-        height: 180, // 固定高度
+        width: MediaQuery.of(context).size.width * 0.85, // 85% of screen width
+        height: 180, // Fixed height
         decoration: BoxDecoration(
-          color: color.withOpacity(0.8), // 卡片背景色
-          borderRadius: BorderRadius.circular(20), // 圆角
+          color: color.withOpacity(0.8), // Card background color
+          borderRadius: BorderRadius.circular(20), // Rounded corners
           boxShadow: [
             BoxShadow(
               color: color.withOpacity(0.4),
@@ -221,7 +264,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
             Icon(
               icon,
               size: 80,
-              color: Colors.white.withOpacity(0.9), // 图标颜色
+              color: Colors.white.withOpacity(0.9), // Icon color
             ),
             const SizedBox(height: 10),
             Text(
@@ -229,12 +272,12 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Colors.white.withOpacity(0.95), // 标题颜色
+                color: Colors.white.withOpacity(0.95), // Title color
               ),
             ),
             const SizedBox(height: 5),
             Text(
-              '点击查看详细${title}',
+              'Click to view detailed $title',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.white.withOpacity(0.7),

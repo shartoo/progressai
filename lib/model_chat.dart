@@ -231,6 +231,32 @@ class ModelChat {
     }
   }
 
+  static String cleanJsonResponse(String jsonString) {
+    try {
+      // 尝试解析外部 JSON，获取 'message' 字段的内容
+      final Map<String, dynamic> outerJson = jsonDecode(jsonString);
+      if (outerJson.containsKey('message') && outerJson['message'] is String) {
+        String innerContent = outerJson['message'];
+
+        // 移除 Markdown 代码块标记
+        // 匹配 "```json\n" 或 "```"
+        innerContent = innerContent.replaceAll(RegExp(r'```json\n'), '');
+        innerContent = innerContent.replaceAll(RegExp(r'\n```'), '');
+
+        return innerContent.trim(); // 移除首尾空白
+      }
+    } catch (e) {
+      // 如果解析外部 JSON 失败，或者没有 'message' 字段，
+      // 那么假设整个字符串就是被 Markdown 包裹的 JSON
+      print('Failed to parse outer JSON or missing "message" field, attempting direct Markdown strip: $e');
+    }
+
+    // 备用方案：直接移除 Markdown 代码块标记
+    String cleaned = jsonString.replaceAll(RegExp(r'```json\n'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'\n```'), '');
+    return cleaned.trim();
+  }
+
   /// 解析聊天响应
   /// 
   /// [jsonResponse] JSON格式的响应字符串

@@ -305,7 +305,7 @@ class _BookListScreenState extends State<BookListScreen> {
           ]
         }
          Important: Return only pure JSON format, do not include any Markdown tags, code block tags, or other text. Do not use ```json or ``` tags。
-         ''';
+      ''';
       print("向LLM发送聊天信息!");
       // 使用ModelChat的chat方法
       final jsonResponse = await _modelChat.chat(
@@ -313,17 +313,16 @@ class _BookListScreenState extends State<BookListScreen> {
         text: prompt,
       );
       print("等待模型返回聊天结果!");
-      final response = ModelChat.parseResponse(jsonResponse);
-      final responseText = ModelChat.getMessage(response) ?? '';
-      // 清理响应文本，移除Markdown代码块标记
-      String cleanedText = _cleanJsonResponse(responseText); // 使用ModelChat的静态方法
+      print(jsonResponse);
+      print("------------JSON 直接结果----------- ");
+      String cleanedText = _cleanJsonResponse(jsonResponse); // 使用ModelChat的静态方法
       // 尝试解析JSON响应
       try {
         final Map<String, dynamic> result = jsonDecode(cleanedText);
         return result;
       } catch (e) {
         print('JSON解析失败: $e');
-        print('原始响应: $responseText');
+        // print('原始响应: $responseText');
         print('清理后文本: $cleanedText');
         return {
           "hierarchy": [], // 确保返回空列表而不是null
@@ -591,7 +590,7 @@ class _BookListScreenState extends State<BookListScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => BookDetailScreen(book: book),
+                                        builder: (context) => BookDetailScreen(book: book, chatEngine: widget.chatEngine),
                                       ),
                                     );
                                   },

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../main.dart'; // Ensure main.dart is imported to access EditingStateProvider
+import '../../main.dart';
 import '../user_data.dart';
 
 class FitnessScreen extends StatefulWidget {
@@ -318,7 +318,7 @@ class _FitnessScreenState extends State<FitnessScreen> {
                   await AppModelsManager.saveData();
                   Navigator.of(dialogContext).pop(); // Use dialogContext to pop the dialog
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('每日健身数据已添加！')),
+                    const SnackBar(content: Text('Daily data add！')),
                   );
                   // Reload data to ensure FutureBuilder rebuilds after adding data
                   setState(() {
@@ -341,7 +341,7 @@ class _FitnessScreenState extends State<FitnessScreen> {
     });
     await AppModelsManager.saveData();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('每日健身记录已删除！')),
+      const SnackBar(content: Text('Daily data removed！')),
     );
     // Reload data to ensure FutureBuilder rebuilds
     setState(() {

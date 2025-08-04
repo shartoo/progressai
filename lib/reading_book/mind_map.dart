@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:graphview/GraphView.dart';
 
@@ -31,10 +30,10 @@ class _MindMapScreenState extends State<MindMapScreen> {
   void initState() {
     super.initState();
     builder
-      ..siblingSeparation = (120) // Increase spacing between sibling nodes
-      ..levelSeparation = (180) // Increase spacing between different levels
-      ..subtreeSeparation = (180) // Increase spacing between subtrees
-      ..orientation = (BuchheimWalkerConfiguration.ORIENTATION_TOP_BOTTOM); // Layout direction
+      ..siblingSeparation = (80)
+      ..levelSeparation = (110)
+      ..subtreeSeparation = (110)
+      ..orientation = (BuchheimWalkerConfiguration.ORIENTATION_LEFT_RIGHT); // Layout direction
 
     // Reinitialize algorithm to ensure it uses the configured builder
     algorithm = BuchheimWalkerAlgorithm(builder, TreeEdgeRenderer(builder));
@@ -50,22 +49,22 @@ class _MindMapScreenState extends State<MindMapScreen> {
 
     try {
       String dataToParse = widget.jsonMindMapData;
-      // If the incoming JSON string is empty, use default data
       if (dataToParse.isEmpty) {
         print("Incoming JSON data is empty, loading default data!");
         dataToParse = _defaultMindMapJson();
       }
       print("JSON data obtained from widget:\n$dataToParse");
 
-      final dynamic decodedData = jsonDecode(dataToParse);
+      // final dynamic decodedData = jsonDecode(dataToParse);
 
+      final dynamic decodedData = _defaultMindMapJson();
       if (decodedData is List) {
         // If the decoded data is a List (e.g., from LLM's "hierarchy" output)
         // Create a virtual root node to contain this list of top-level nodes
         _rootNode = MindMapNode(
-          id: 'virtual_root_${DateTime.now().millisecondsSinceEpoch}',
+          id: 'root_${DateTime.now().millisecondsSinceEpoch}',
           title: widget.bookTitle, // Use book title as virtual root title
-          description: 'AI generated mind map for ${widget.bookTitle}',
+          summary: '{widget.bookTitle}',
           children: decodedData.map((item) => MindMapNode.fromJson(item as Map<String, dynamic>)).toList(),
         );
       } else if (decodedData is Map<String, dynamic>) {
@@ -99,36 +98,80 @@ class _MindMapScreenState extends State<MindMapScreen> {
     return '''
     [
       {
-        "id": "default_root_concept",
-        "title": "Default Mind Map - Welcome",
-        "description": "This is an example mind map demonstrating information organization.",
+        "id": "book_root",
+        "title": "The Running for Governor",
+        "summary": "A story about a political campaign and its challenges.",
         "children": [
           {
-            "id": "topic1",
-            "title": "Core Concepts",
-            "description": "Main functionalities of the application",
+            "id": "chapter_1_introduction",
+            "title": "Chapter 1: The Announcement",
+            "summary": "Introduction of the protagonist, John Smith, and his decision to run for governor.",
             "children": [
-              {"id": "subtopic1_1", "title": "Book Upload", "description": "Supports PDF and TXT formats"},
-              {"id": "subtopic1_2", "title": "Mind Mapping", "description": "Visualizing book core information"}
+              {"id": "john_smith_profile", "title": "John Smith", "summary": "A seasoned politician with a strong vision."},
+              {"id": "initial_reactions", "title": "Public Reaction", "summary": "Mixed reactions to his unexpected candidacy."}
             ]
           },
           {
-            "id": "topic2",
-            "title": "Technology Stack",
-            "description": "Technologies used to build this application",
+            "id": "chapter_2_campaign_kickoff",
+            "title": "Chapter 2: Campaign Kick-off",
+            "summary": "The initial phase of the campaign, setting up the team and strategy.",
             "children": [
-              {"id": "subtopic2_1", "title": "Flutter Dart", "description": "Cross-platform UI framework"},
-              {"id": "subtopic2_2", "title": "GraphView", "description": "For graph and tree structure display"},
-              {"id": "subtopic2_3", "title": "File I/O", "description": "Local storage and PDF parsing"}
+              {"id": "campaign_team", "title": "Building the Team", "summary": "Recruiting key advisors and volunteers."},
+              {"id": "strategy_development", "title": "Crafting the Message", "summary": "Focusing on education and economic growth."}
             ]
           },
           {
-            "id": "topic3",
-            "title": "Future Outlook",
-            "description": "Possible improvements and new features",
+            "id": "chapter_3_early_challenges",
+            "title": "Chapter 3: Early Challenges",
+            "summary": "Facing initial hurdles, including funding and media scrutiny.",
             "children": [
-              {"id": "subtopic3_1", "title": "LLM Integration", "description": "Automatic extraction of more precise mind maps"},
-              {"id": "subtopic3_2", "title": "User Interaction", "description": "Editing nodes, custom layouts"}
+              {"id": "fundraising_struggles", "title": "Funding Issues", "summary": "Difficulty in securing sufficient campaign funds."},
+              {"id": "media_scrutiny", "title": "Media Scrutiny", "summary": "Past controversies resurface."}
+            ]
+          },
+          {
+            "id": "chapter_4_public_debates",
+            "title": "Chapter 4: Public Debates",
+            "summary": "John Smith participates in crucial debates against his opponents.",
+            "children": [
+              {"id": "opponent_analysis", "title": "Analyzing Opponents", "summary": "Understanding their strengths and weaknesses."},
+              {"id": "debate_performance", "title": "Debate Performance", "summary": "John's strong showing in key debates."}
+            ]
+          },
+          {
+            "id": "chapter_5_personal_sacrifices",
+            "title": "Chapter 5: Personal Sacrifices",
+            "summary": "The toll the campaign takes on John's personal life and family.",
+            "children": [
+              {"id": "family_strain", "title": "Family Strain", "summary": "Challenges in balancing campaign and family life."},
+              {"id": "personal_reflection", "title": "Self-Reflection", "summary": "Questioning the true cost of power."}
+            ]
+          },
+          {
+            "id": "chapter_6_final_stretch",
+            "title": "Chapter 6: The Final Stretch",
+            "summary": "The intense last weeks leading up to election day.",
+            "children": [
+              {"id": "grassroots_efforts", "title": "Grassroots Mobilization", "summary": "Rallying support from local communities."},
+              {"id": "last_minute_attacks", "title": "Negative Campaigning", "summary": "Dealing with smear campaigns from rivals."}
+            ]
+          },
+          {
+            "id": "chapter_7_election_day",
+            "title": "Chapter 7: Election Day",
+            "summary": "The climactic day of voting and awaiting the results.",
+            "children": [
+              {"id": "voter_turnout", "title": "Voter Turnout", "summary": "High or low participation impacting the outcome."},
+              {"id": "results_waiting", "title": "Anxious Waiting", "summary": "The tension as votes are counted."}
+            ]
+          },
+          {
+            "id": "chapter_8_the_outcome",
+            "title": "Chapter 8: The Outcome",
+            "summary": "The announcement of the election results and its aftermath.",
+            "children": [
+              {"id": "victory_defeat", "title": "Victory or Defeat", "summary": "The ultimate fate of John Smith's campaign."},
+              {"id": "future_implications", "title": "Future Implications", "summary": "What the results mean for his career and the state."}
             ]
           }
         ]
@@ -189,7 +232,7 @@ class _MindMapScreenState extends State<MindMapScreen> {
       backgroundColor = Colors.deepPurple;
       textColor = Colors.white;
       padding = 16.0;
-      fontSize = 18.0;
+      fontSize = 18.0; // Increased font size
       borderRadius = BorderRadius.circular(25);
       boxShadow = [BoxShadow(color: Colors.deepPurple.withOpacity(0.5), blurRadius: 10, spreadRadius: 2)];
     } else if (mindMapNode.children.isNotEmpty) {
@@ -197,7 +240,7 @@ class _MindMapScreenState extends State<MindMapScreen> {
       backgroundColor = Colors.blueAccent;
       textColor = Colors.white;
       padding = 12.0;
-      fontSize = 16.0;
+      fontSize = 16.0; // Increased font size
       borderRadius = BorderRadius.circular(20);
       boxShadow = [BoxShadow(color: Colors.blueAccent.withOpacity(0.4), blurRadius: 8, spreadRadius: 1)];
     } else {
@@ -205,7 +248,7 @@ class _MindMapScreenState extends State<MindMapScreen> {
       backgroundColor = Colors.white;
       textColor = Colors.black87;
       padding = 10.0;
-      fontSize = 14.0;
+      fontSize = 14.0; // Increased font size
       borderRadius = BorderRadius.circular(15);
       boxShadow = [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 5, spreadRadius: 0.5)];
     }
@@ -213,7 +256,7 @@ class _MindMapScreenState extends State<MindMapScreen> {
     return InkWell(
       onTap: () {
         // Tapping on a node can display more information or navigate
-        _showMessage('Clicked node: ${mindMapNode.title}\nDescription: ${mindMapNode.description ?? 'None'}');
+        _showMessage('Clicked node: ${mindMapNode.title}\nDescription: ${mindMapNode.summary ?? 'None'}');
       },
       child: Container(
         padding: EdgeInsets.all(padding),
@@ -235,17 +278,17 @@ class _MindMapScreenState extends State<MindMapScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            if (mindMapNode.description != null && mindMapNode.description!.isNotEmpty)
+            if (mindMapNode.summary != null && mindMapNode.summary!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 4.0),
                 child: Text(
-                  mindMapNode.description!,
+                  mindMapNode.summary!,
                   style: TextStyle(
                     color: textColor.withOpacity(0.8),
                     fontSize: fontSize * 0.75,
                   ),
                   textAlign: TextAlign.center,
-                  maxLines: 2,
+                  maxLines: 4, // Increased maxLines
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -342,21 +385,17 @@ class _MindMapScreenState extends State<MindMapScreen> {
         maxScale: 4.0, // Maximum zoom scale
         scaleEnabled: true, // Enable zooming
         panEnabled: true, // Enable panning
-        child: SizedBox( // Use SizedBox instead of Container for fixed size
-          width: MediaQuery.of(context).size.width * 2, // Ensure enough space
-          height: MediaQuery.of(context).size.height * 2,
-          child: GraphView(
-            graph: graph,
-            algorithm: algorithm,
-            builder: (Node node) {
-              // Return custom node Widget
-              return _buildNodeWidget(context, node);
-            },
-            paint: Paint()
-              ..color = Colors.grey[700]! // Edge color
-              ..strokeWidth = 1.5 // Edge thickness
-              ..style = PaintingStyle.stroke,
-          ),
+        child: GraphView( // Directly use GraphView as child
+          graph: graph,
+          algorithm: algorithm,
+          builder: (Node node) {
+            // Return custom node Widget
+            return _buildNodeWidget(context, node);
+          },
+          paint: Paint()
+            ..color = Colors.grey[700]! // Edge color
+            ..strokeWidth = 1.5 // Edge thickness
+            ..style = PaintingStyle.stroke,
         ),
       ),
     );

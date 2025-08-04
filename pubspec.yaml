@@ -46,6 +46,7 @@ dependencies:
   graphview: ^1.2.0
   file_picker: ^8.0.0
   read_pdf_text: ^0.3.1
+  pdfx: ^2.9.2
   fl_chart: ^0.68.0 # Add this for charting
   provider: ^6.1.2 # Add this for state management
 
@@ -100,5 +101,8 @@ flutter:
   #
   assets:
     - assets/book_cover.jpg
+    - assets/weight_manage.json
+    - assets/loss_weight2.png
+    - assets/food.jpg
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package

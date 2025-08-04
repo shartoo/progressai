@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gemma/core/chat.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:progressai/weight_manage/user_data.dart';
 import 'package:progressai/weight_manage/weight_home.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-
+import 'dart:ui' as ui;
+import 'package:flutter/services.dart';
 import '../model_chat.dart';
 
 class WeightChatPage extends StatefulWidget {
@@ -36,10 +38,11 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
     'Psychology': 0,
   };
 
+  final ImagePicker _imagePicker = ImagePicker();
   File? _attachedImage; // To store the attached image file
+  Uint8List? _selectedImage;
   bool _isUploadingImage = false; // To track image upload status
   double _uploadProgress = 0.0; // To track image upload progress
-
   @override
   void initState() {
     super.initState();
@@ -69,14 +72,14 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
     _scrollToBottom();
 
     final jsonResponse = await _modelChat.chat(
-      chatEngine: widget.chatEngine,
-      text: message,
-
+        chatEngine: widget.chatEngine,
+        text: message,
+        imageBytes:_selectedImage,
     );
     print("等待模型返回聊天结果!");
-    final response = ModelChat.parseResponse(jsonResponse);
-    final responseText = ModelChat.getMessage(response) ?? '';
-
+    // final response = ModelChat.parseResponse(jsonResponse);
+    // final responseText = ModelChat.getMessage(response) ?? '';
+    final responseText = ModelChat.cleanJsonResponse(jsonResponse);
     String llmResponse = "Gemma-3n response : $responseText";
     int updatedCountBasic = 1;
     int updatedCountDoctor = 2;
@@ -138,17 +141,18 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
   }
 
   Future<void> _pickImage() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image);
-
-    if (result != null && result.files.single.path != null) {
+    final pickedFile = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
       setState(() {
-        _attachedImage = File(result.files.single.path!);
-        _isUploadingImage = true;
-        _uploadProgress = 0.0;
+        _selectedImage = bytes;
+        _attachedImage = File(pickedFile.path);
       });
-
-      await _uploadImageToLocal(_attachedImage!);
-
       setState(() {
         _isUploadingImage = false;
         _uploadProgress = 1.0;
@@ -157,6 +161,7 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Image uploaded successfully!')),
       );
+
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Image selection cancelled.')),

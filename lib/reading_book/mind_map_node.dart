@@ -1,38 +1,37 @@
-// lib/models/mind_map_node.dart
+
 class MindMapNode {
   final String id;
   final String title;
-  final String? description; // 节点描述
-  final List<MindMapNode> children; // 子节点
+  final String? summary; // Node description
+  final List<MindMapNode> children; // Child nodes
 
   MindMapNode({
     required this.id,
     required this.title,
-    this.description,
+    this.summary,
     this.children = const [],
   });
 
-  // 从JSON创建MindMapNode对象
-  // 这个工厂构造函数负责将Map<String, dynamic>转换为MindMapNode实例
+  // Factory constructor to create MindMapNode object from JSON
   factory MindMapNode.fromJson(Map<String, dynamic> json) {
     return MindMapNode(
-      id: json['id'],
-      title: json['title'],
-      description: json['description'],
-      // 递归地将子节点列表中的每个JSON对象转换为MindMapNode对象
+      id: json['id'] as String? ?? 'unknown_id', // Provide default for id
+      title: json['title'] as String? ?? 'Untitled Node', // Provide default for title
+      summary: json['summary'] as String?, // description can be null
+      // Recursively map child JSON objects to MindMapNode objects
       children: (json['children'] as List<dynamic>?)
-          ?.map((childJson) => MindMapNode.fromJson(childJson))
+          ?.map((childJson) => MindMapNode.fromJson(childJson as Map<String, dynamic>))
           .toList() ??
-          [], // 如果children为null，则默认为空列表
+          [], // Default to empty list if children is null
     );
   }
 
-  // 将MindMapNode对象转换为JSON
+  // Convert MindMapNode object to JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'title': title,
-      'description': description,
+      'summary': summary,
       'children': children.map((child) => child.toJson()).toList(),
     };
   }
