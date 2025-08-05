@@ -88,9 +88,10 @@ Note: You must be logged in and agree to Hugging Face's agreement before downloa
 
 ### 3.2 Model Download and Loading Verification
 
-Because Hugging Face has completely banned access from China, the current project cannot test the process of entering a token and downloading from a mobile phone. In Android Studio, we manually downloaded and placed it in /data/user/0/com.webhub.progressai/app_flutter/gemma-3n-E4B-it-int4.task
+Because Hugging Face has completely banned access from China, the current project cannot test the process of entering a token and downloading from a mobile phone. In Android Studio, we manually downloaded and placed it in `/data/user/0/com.webhub.progressai/app_flutter/gemma-3n-E4B-it-int4.task`
 
-4 Future Development
+## 4 Future Development
+
 1. The mind map is currently very simple; for demonstration purposes, only default data is loaded.
 2. Regarding fitness and weight loss, there are currently no recommended exercises or combinations of exercise and weight loss; nutritionists also lack key data definitions.
 3. Leveraging gemma-3n's speech recognition capabilities, it should be able to understand the rhythm and cadence of singing. Consider using it to teach users to sing.
