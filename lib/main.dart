@@ -72,7 +72,7 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _initializeGemmaChat() async {
     try {
-      final chat = await _modelChat.initializeGemmaChat(
+      final chat = await _modelChat.initializeGemmaChat(context,
         onProgress: (progress) {
           setState(() {
             _downloadProgress = progress;
