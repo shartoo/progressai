@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
@@ -183,51 +184,57 @@ class ModelChat {
   }
 
   /// 流式对话方法
-  /// 
+  ///
   /// [text] 用户输入的文本
-  /// [prompt] 系统提示词
+  /// [chatEngine] 聊天引擎实例
   /// [imageBytes] 可选的图片数据
-  /// [onToken] 每个token的回调函数
-  /// 
-  /// 返回是否成功
-  Future<bool> chatStream({
+  /// [onToken] 每个token的回调函数，用于实时更新UI
+  ///
+  /// 返回Future<void>，表示流处理的完成或错误。
+  Future<void> chatStream({
     required InferenceChat chatEngine,
     required String text,
     Uint8List? imageBytes,
-    required Function(String token) onToken,
+    required Function(String token) onToken, // This callback will be invoked for each token
   }) async {
     try {
-      // 创建用户消息
-      final userMessage = imageBytes != null 
-        ? Message.withImage(
-            text: text,
-            imageBytes: imageBytes,
-            isUser: true,
-          )
-        : Message(
-            text: text,
-            isUser: true,
-          );
-      // 添加用户消息到聊天
-      String responseText = "";
-      await chatEngine.addQueryChunk(userMessage);
-      chatEngine.generateChatResponseAsync().listen((ModelResponse response) {
-        if (response is TextResponse) {
-          responseText = response.token;
-        }
-      }, onDone: () {
-        print('Chat stream closed');
-      }, onError: (error) {
-        print('Chat error: $error');
-      });
+      final userMessage = imageBytes != null
+          ? Message.withImage(
+        text: text,
+        imageBytes: imageBytes,
+        isUser: true,
+      )
+          : Message(
+        text: text,
+        isUser: true,
+      );
 
-      // 将结果按字符分割并逐个回调
-      for (int i = 0; i < responseText.length; i++) {
-        onToken(responseText[i]);
-      }
-      return true;
+      await chatEngine.addQueryChunk(userMessage);
+
+      // Use a Completer to wait for the stream to complete or error
+      final completer = Completer<void>();
+
+      chatEngine.generateChatResponseAsync().listen(
+            (ModelResponse response) {
+          if (response is TextResponse) {
+            onToken(response.token); // Call the provided callback with each token
+          }
+        },
+        onDone: () {
+          print('Chat stream closed');
+          completer.complete(); // Mark the Future as complete when the stream is done
+        },
+        onError: (error) {
+          print('Chat error: $error');
+          completer.completeError(error); // Mark the Future with an error
+        },
+        cancelOnError: true, // Automatically cancel subscription on error
+      );
+
+      await completer.future; // Wait for the stream to complete or error
     } catch (e) {
-      return false;
+      print('Error in ModelChat.chatStream: $e');
+      rethrow; // Re-throw the error to the caller
     }
   }
 
@@ -238,16 +245,14 @@ class ModelChat {
       if (outerJson.containsKey('message') && outerJson['message'] is String) {
         String innerContent = outerJson['message'];
 
-        // 移除 Markdown 代码块标记
-        // 匹配 "```json\n" 或 "```"
+        // remove Markdown tags
+        // match "```json\n" 或 "```"
         innerContent = innerContent.replaceAll(RegExp(r'```json\n'), '');
         innerContent = innerContent.replaceAll(RegExp(r'\n```'), '');
 
         return innerContent.trim(); // 移除首尾空白
       }
     } catch (e) {
-      // 如果解析外部 JSON 失败，或者没有 'message' 字段，
-      // 那么假设整个字符串就是被 Markdown 包裹的 JSON
       print('Failed to parse outer JSON or missing "message" field, attempting direct Markdown strip: $e');
     }
 
@@ -298,43 +303,5 @@ class ModelChat {
   }
 }
 
-/// 预定义的提示词模板
-class PromptTemplates {
-  /// 减肥助手提示词
-  static const String weightManagement = '''
-    您是一个专业的AI减肥助手。您的目标是帮助用户健康减肥，提供个性化建议和鼓励。
-    
-    您的职责包括：
-    1. 分析用户的饮食和运动情况
-    2. 提供个性化的减肥建议
-    3. 鼓励用户坚持健康的生活方式
-    4. 回答关于营养、运动、心理健康的问题
-    5. 帮助用户设定和跟踪减肥目标
-    
-    请用友好、专业、鼓励的语气回复用户。
-''';
 
-  /// 阅读助手提示词
-  static const String readingAssistant = '''
-    您是一个专业的AI阅读助手。您的目标是帮助用户更好地理解和分析文本内容。
-    
-    您的功能包括：
-    1. 总结文章的主要内容和关键观点
-    2. 分析文本的结构和逻辑
-    3. 回答用户关于文本内容的问题
-    4. 提供个性化的阅读建议
-    5. 帮助用户深入理解复杂概念
-    
-    请用清晰、准确、有帮助的方式回复用户。
-''';
 
-  /// 通用助手提示词
-  static const String generalAssistant = '''
-您是一个有用的AI助手。请根据用户的需求提供准确、有帮助的回复。
-请确保回复：
-1. 准确且相关
-2. 清晰易懂
-3. 有帮助且实用
-4. 友好且专业
-''';
-} 

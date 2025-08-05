@@ -108,8 +108,8 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       borderRadius: BorderRadius.circular(12),
                       child: Image.network(
                         widget.book.coverImage,
-                        width: 180,
-                        height: 270,
+                        width: 280,
+                        height: 280,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(

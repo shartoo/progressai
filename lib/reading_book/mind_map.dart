@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:graphview/GraphView.dart';
 
@@ -30,9 +31,9 @@ class _MindMapScreenState extends State<MindMapScreen> {
   void initState() {
     super.initState();
     builder
-      ..siblingSeparation = (80)
-      ..levelSeparation = (110)
-      ..subtreeSeparation = (110)
+      ..siblingSeparation = (90) // Increase spacing between sibling nodes
+      ..levelSeparation = (110) // Increase spacing between different levels
+      ..subtreeSeparation = (110) // Increase spacing between subtrees
       ..orientation = (BuchheimWalkerConfiguration.ORIENTATION_LEFT_RIGHT); // Layout direction
 
     // Reinitialize algorithm to ensure it uses the configured builder
@@ -49,33 +50,53 @@ class _MindMapScreenState extends State<MindMapScreen> {
 
     try {
       String dataToParse = widget.jsonMindMapData;
+      // If the incoming JSON string is empty, use default data
       if (dataToParse.isEmpty) {
         print("Incoming JSON data is empty, loading default data!");
         dataToParse = _defaultMindMapJson();
       }
       print("JSON data obtained from widget:\n$dataToParse");
 
-      // final dynamic decodedData = jsonDecode(dataToParse);
+      final dynamic decodedData = jsonDecode(dataToParse);
 
-      final dynamic decodedData = _defaultMindMapJson();
+      // The MindMapNode expects a single root, but LLM might return a list of top-level nodes.
+      // We need to create a virtual root if the decoded data is a list.
       if (decodedData is List) {
-        // If the decoded data is a List (e.g., from LLM's "hierarchy" output)
-        // Create a virtual root node to contain this list of top-level nodes
+        // Robustly parse top-level children
+        List<MindMapNode> topLevelChildren = [];
+        for (var item in decodedData) {
+          if (item is Map<String, dynamic>) {
+            try {
+              topLevelChildren.add(MindMapNode.fromJson(item));
+            } catch (e) {
+              print('Warning: Failed to parse a top-level node in list: $e, data: $item');
+              // Continue processing other items, but log the error
+            }
+          } else {
+            print('Warning: Skipping non-map item in top-level list: $item');
+          }
+        }
+
         _rootNode = MindMapNode(
-          id: 'root_${DateTime.now().millisecondsSinceEpoch}',
+          id: 'virtual_root_${DateTime.now().millisecondsSinceEpoch}',
           title: widget.bookTitle, // Use book title as virtual root title
-          summary: '{widget.bookTitle}',
-          children: decodedData.map((item) => MindMapNode.fromJson(item as Map<String, dynamic>)).toList(),
+          summary: '', // Use summary field
+          children: topLevelChildren,
         );
       } else if (decodedData is Map<String, dynamic>) {
-        // If the decoded data is a Map (e.g., from default JSON or a single root node)
+        // If the decoded data is already a single root node (Map)
         _rootNode = MindMapNode.fromJson(decodedData);
       } else {
-        throw Exception('Invalid JSON data format for mind map.');
+        throw Exception('Invalid JSON data format for mind map. Expected List or Map, got ${decodedData.runtimeType}');
       }
 
       // Build GraphView's Graph object from MindMapNode object
-      _buildGraphFromMindMapNode(_rootNode!);
+      if (_rootNode != null) {
+        _buildGraphFromMindMapNode(_rootNode!);
+      } else {
+        throw Exception('Root node could not be created from JSON data.');
+      }
+
     } catch (e) {
       print('Failed to load or parse mind map data: $e');
       _rootNode = null; // Ensure root node is null on error
@@ -256,7 +277,7 @@ class _MindMapScreenState extends State<MindMapScreen> {
     return InkWell(
       onTap: () {
         // Tapping on a node can display more information or navigate
-        _showMessage('Clicked node: ${mindMapNode.title}\nDescription: ${mindMapNode.summary ?? 'None'}');
+        _showMessage('Clicked node: ${mindMapNode.title}\nSummary: ${mindMapNode.summary ?? 'None'}');
       },
       child: Container(
         padding: EdgeInsets.all(padding),
@@ -385,6 +406,7 @@ class _MindMapScreenState extends State<MindMapScreen> {
         maxScale: 4.0, // Maximum zoom scale
         scaleEnabled: true, // Enable zooming
         panEnabled: true, // Enable panning
+        // Removed the wrapping Container with fixed width/height
         child: GraphView( // Directly use GraphView as child
           graph: graph,
           algorithm: algorithm,

@@ -28,6 +28,7 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
   final List<Map<String, String>> _messages = []; // Store chat messages
   final ModelChat _modelChat = ModelChat();
   final ScrollController _scrollController = ScrollController(); // Add ScrollController
+  bool _isLLMThinking = false;
 
   // Notification counters for each category
   Map<String, int> _notificationCounts = {
@@ -40,9 +41,155 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
 
   final ImagePicker _imagePicker = ImagePicker();
   File? _attachedImage; // To store the attached image file
-  Uint8List? _selectedImage;
-  bool _isUploadingImage = false; // To track image upload status
-  double _uploadProgress = 0.0; // To track image upload progress
+  Uint8List? _selectedImage; // To store the attached image bytes
+  bool _isUploadingImage = false; // To track image upload status (if needed for UI)
+  double _uploadProgress = 0.0; // To track image upload progress (if needed for UI)
+
+  // The JSON metadata for LLM prompt
+  final String _llmMetadata = """
+{
+  "UserProfile": {
+    "description": "Basic user information, capturing fundamental personal details and overall weight management goals.",
+    "Fixed_Attributes": {
+      "age": "User's age.",
+      "gender": "User's gender.",
+      "heightCm": "User's height in centimeters.",
+      "initialWeightKg": "User's weight at the start of the program in kilograms.",
+      "currentWeightKg": "User's current weight in kilograms.",
+      "targetWeightKg": "User's target weight in kilograms.",
+      "targetDate": "The target date to achieve the weight goal.",
+      "weeklyWeightLossTargetKg": "User's weekly target weight loss in kilograms.",
+      "progressPercentage": "Calculated percentage of progress towards the target weight.",
+      "weightLossPhase": "Current phase of the weight management journey (e.g., 'Initial Phase').",
+      "occupation": "User's occupation, which may influence activity levels and stress.",
+      "activityLevel": "User's general activity level (e.g., 'Sedentary', 'Lightly Active').",
+      "healthConditions": "List of known health conditions.",
+      "medicalAllergies": "History of drug allergies.",
+      "dietaryPreferencesRestrictions": "User's dietary preferences or restrictions (e.g., 'Vegetarian', 'Gluten-Free').",
+      "sleepPatternDescription": "A description of the user's sleep habits.",
+      "stressLevelDescription": "A description of the user's stress levels.",
+      "longTermGoalsDescription": "A description of the user's long-term health and fitness goals.",
+      "startDate": "The date the user started using the app.",
+      "bodyShape": "User's body shape (e.g., 'Rectangle')."
+    },
+    "Daily_Data": {
+      "weightHistory": {
+        "description": "List of daily weight entries.",
+        "fields": {
+          "date": "The date of the weight recording.",
+          "weightKg": "The recorded weight in kilograms."
+        }
+      }
+    }
+  },
+  "Doctor": {
+    "description": "Medical information, focusing on the user's medical history and daily health metrics relevant to a doctor.",
+    "Fixed_Attributes": {
+      "allergyMedications": "List of medications the user is allergic to.",
+      "currentMedications": "List of medications the user is currently taking.",
+      "existingMedicalConditions": "List of pre-existing medical conditions (e.g., 'Hypertension', 'Diabetes').",
+      "bloodLipidProfile": "Map of blood lipid levels (e.g., Total Cholesterol, LDL, HDL, Triglycerides).",
+      "thyroidFunction": "Overview of thyroid function (e.g., 'Normal').",
+      "liverKidneyFunction": "Overview of liver and kidney function."
+    },
+    "Daily_Data": {
+      "dailyDataHistory": {
+        "description": "List of daily medical data entries.",
+        "fields": {
+          "date": "The date of the daily record.",
+          "bloodGlucose": "Daily blood glucose level.",
+          "bloodPressure": "Daily blood pressure reading.",
+          "bodyStatus": "Description of daily body status (e.g., 'Feeling good').",
+          "sleepQuality": "Daily sleep quality (e.g., 'Good', 'Average').",
+          "waterIntakeMl": "Daily water intake in milliliters.",
+          "bowelMovementStatus": "Daily bowel movement status.",
+          "medicationAdherence": "Status of medication adherence.",
+          "symptoms": "List of any recorded symptoms."
+        }
+      }
+    }
+  },
+  "Nutritionist": {
+    "description": "Nutritional information, covering the user's dietary habits, preferences, and daily food intake.",
+    "Fixed_Attributes": {
+      "dailyEatingPattern": "Description of the user's typical daily eating pattern.",
+      "cookingPreference": "User's preferred cooking methods.",
+      "dislikedFoods": "List of foods the user dislikes.",
+      "foodAllergies": "List of food allergies.",
+      "eatingOutFrequency": "How often the user eats out.",
+      "alcoholConsumption": "User's alcohol consumption habits.",
+      "caffeineIntake": "User's caffeine intake habits."sibleNutrientDeficiencies": "List of potential nutrient deficiencies.",
+      "recommendedSupplements": "List of recommended supplements.",
+      "digestiveHealthOverview": "Overview of the user's digestive health."
+    },
+    "Daily_Data": {
+      "dailyDataHistory": {
+        "description": "List of daily diet record entries.",
+        "fields": {
+          "date": "The date of the meal record.",
+          "mealCategory": "Type of meal (e.g., 'Breakfast', 'Lunch').",
+          "imageUrl": "URL or local path of the food image.",
+          "foodNutritionSummary": "A text description of the meal's nutrition.",
+          "foodMetricsData": "Map of food metrics (e.g., Protein, Fat, Energy, Carbs, Other)."
+        }
+      }
+    }
+  },
+  "Fitness": {
+    "description": "Fitness information, recording the user's fitness preferences, limitations, goals, and daily workout details.",
+    "Fixed_Attributes": {
+      "bodyMeasurements": "Map of body circumference measurements (e.g., Waist, Hip, Chest).",
+      "likedExercises": "List of exercises the user enjoys.",
+      "dislikedExercises": "List of exercises the user dislikes.",
+      "preferredWorkoutStyle": "User's preferred workout style.",
+      "physicalLimitations": "List of any physical limitations or old injuries.",
+      "fitnessGoals": "List of the user's fitness goals."
+    },
+    "Daily_Data": {
+      "dailyDataHistory": {
+        "description": "List of daily fitness data entries.",
+        "fields": {
+          "date": "The date of the workout record.",
+          "exerciseItem": "Description of the exercise performed.",
+          "estimatedCalorieBurn": "Estimated calories burned during the workout.",
+          "fatLossArea": "Specific area targeted for fat loss (if any).",
+          "workoutDurationMinutes": "Duration of the workout in minutes.",
+          "intensityLevel": "Workout intensity (e.g., 'Low', 'Medium').",
+          "exerciseSummary": "A summary of the exercise session.",
+          "averageHeartRate": "Average heart rate during the workout.",
+          "peakHeartRate": "Peak heart rate during the workout.",
+          "strengthTrainingDetails": "Details of strength training (sets, reps, weight).",
+          "cardioDetails": "Details of cardio training (e.g., distance, pace).",
+          "userBodyStatus": "User's body status after the workout.",
+          "feelingAfterWorkout": "How the user felt after the workout.",
+          "recoveryStatus": "User's recovery status."
+        }
+      }
+    }
+  },
+  "Psychology": {
+    "description": "Psychological information, focusing on the user's psychological state, motivations, and daily emotional well-being related to their health journey.",
+    "Fixed_Attributes": {
+      "weightLossMotivation": "The user's underlying motivation for weight loss (e.g., 'For health and confidence', 'Perfectionism').",
+      "pastDietExperience": "A summary of past weight loss and fitness experiences and their psychological impact.",
+      "selfConfidenceIndex": "A numerical index (1-10) representing the user's confidence in achieving their goals.",
+      "selfPerception": "How the user views and evaluates their own physical appearance."
+    },
+    "Daily_Data": {
+      "dailyDataHistory": {
+        "description": "List of daily psychological data entries.",
+        "fields": {
+          "date": "The date of the daily record.",
+          "moodStatus": "User's daily mood status (e.g., 'Happy', 'Anxious', 'Frustrated').",
+          "stressLevel": "User's daily stress level (e.g., 'Low', 'Medium', 'High').",
+          "psychologicalChallenges": "List of psychological challenges encountered on that day (e.g., 'Cravings', 'Lack of motivation')."
+        }
+      }
+    }
+  }
+}
+""";
+
   @override
   void initState() {
     super.initState();
@@ -59,12 +206,20 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
 
   // Placeholder method for LLM analysis and data update
   Future<void> _analyzeAndCategorizeLLMResponse(String message, {String? imagePath}) async {
+    // Add user message to chat history
     setState(() {
       _messages.add({
         'role': 'user',
         'text': message,
         'time': DateFormat('hh:mma').format(DateTime.now()),
         if (imagePath != null) 'imagePath': imagePath,
+      });
+      _isLLMThinking = true; // Set thinking status to true
+      // Add a placeholder for LLM response that will be updated by stream
+      _messages.add({
+        'role': 'llm',
+        'text': '', // Start with an empty text
+        'time': DateFormat('hh:mma').format(DateTime.now()),
       });
     });
 
@@ -76,7 +231,7 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
         text: message,
         imageBytes:_selectedImage,
     );
-    print("等待模型返回聊天结果!");
+
     // final response = ModelChat.parseResponse(jsonResponse);
     // final responseText = ModelChat.getMessage(response) ?? '';
     final responseText = ModelChat.cleanJsonResponse(jsonResponse);
@@ -87,28 +242,6 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
     int updatedCountFitness = 2;
     int updatedCountPsychology = 3;
 
-    // For demonstration, let's simulate some updates and notifications
-    if (message.toLowerCase().contains('weight')) {
-      updatedCountBasic = 1;
-      llmResponse += "\nI've noted your weight update.";
-    }
-    if (message.toLowerCase().contains('blood pressure')) {
-      updatedCountDoctor = 2;
-      llmResponse += "\nYour blood pressure data has been recorded.";
-    }
-    if (message.toLowerCase().contains('food')) {
-      updatedCountNutritionist = 3;
-      llmResponse += "\nYour food intake details are being analyzed.";
-    }
-    if (message.toLowerCase().contains('exercise')) {
-      updatedCountFitness = 1;
-      llmResponse += "\nGreat workout! Data updated.";
-    }
-    if (message.toLowerCase().contains('mood')) {
-      updatedCountPsychology = 2;
-      llmResponse += "\nI've logged your mood.";
-    }
-
     // Update notification counts
     setState(() {
       _notificationCounts['Basic'] = updatedCountBasic;
@@ -116,6 +249,7 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
       _notificationCounts['Nutritionist'] = updatedCountNutritionist;
       _notificationCounts['Fitness'] = updatedCountFitness;
       _notificationCounts['Psychology'] = updatedCountPsychology;
+      _isLLMThinking = false;
     });
 
     await AppModelsManager.saveData();
@@ -195,6 +329,7 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Image upload failed: $e')),
+
       );
     }
   }
@@ -225,18 +360,16 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
     }
   }
 
-  // Helper to build a tab with an optional notification badge
   Widget _buildTab(String text, IconData icon, int notificationCount) {
     return Tab(
-      // Removed SizedBox with fixed height to allow Tab to size itself
       child: Stack(
         alignment: Alignment.center,
         children: [
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 20), // Reduced icon size from 22 to 20
-              Text(text, style: const TextStyle(fontSize: 9)), // Reduced font size from 10 to 9
+              Icon(icon, size: 20),
+              Text(text, style: const TextStyle(fontSize: 9)),
             ],
           ),
           if (notificationCount > 0)
@@ -272,7 +405,7 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Weight Management Chat'), // 更改标题以区分
+        title: const Text('Weight Management Chat'),
         centerTitle: true,
         backgroundColor: Colors.orange[100],
         bottom: PreferredSize( // Wrap TabBar in PreferredSize
@@ -283,13 +416,12 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
             labelColor: Colors.deepOrange,
             unselectedLabelColor: Colors.grey,
             onTap: (index) {
-              // 这里修改导航逻辑：跳转到 WeightHome 并传递选中的 Tab 索引
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => WeightHome(
                     chatEngine: widget.chatEngine,
-                    initialTabIndex: index, // 传递选中的 Tab 索引
+                    initialTabIndex: index,
                   ),
                 ),
               );
@@ -308,7 +440,7 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
         children: [
           Expanded(
             child: ListView.builder(
-              controller: _scrollController, // Attach ScrollController
+              controller: _scrollController,
               padding: const EdgeInsets.all(16.0),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
@@ -361,6 +493,19 @@ class _WeightChatPageState extends State<WeightChatPage> with SingleTickerProvid
               },
             ),
           ),
+          // LLM Thinking Indicator
+          if (_isLLMThinking)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(strokeWidth: 2),
+                  const SizedBox(width: 10),
+                  Text('Gemma-3n is thinking...', style: TextStyle(color: Colors.grey[600])),
+                ],
+              ),
+            ),
           Padding(
             padding: EdgeInsets.only(
               left: 8.0,

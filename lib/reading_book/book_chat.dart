@@ -142,6 +142,12 @@ class _BookChatScreenState extends State<BookChatScreen> with SingleTickerProvid
         'time': DateFormat('hh:mma').format(DateTime.now()),
       });
       _isLLMThinking = true;
+      // Add a placeholder for LLM response that will be updated by stream
+      _messages.add({
+        'role': 'llm',
+        'text': '', // Start with an empty text
+        'time': DateFormat('hh:mma').format(DateTime.now()),
+      });
     });
     _chatScrollToBottom();
 
@@ -154,7 +160,7 @@ class _BookChatScreenState extends State<BookChatScreen> with SingleTickerProvid
       ---
       $currentPageContent
       ---
-      
+     
       User's question/comment: "$userMessage"
       
       Based on the current page content and the user's input, please provide a helpful and concise response.
@@ -162,28 +168,23 @@ class _BookChatScreenState extends State<BookChatScreen> with SingleTickerProvid
       """;
 
     try {
-      final jsonResponse = await _modelChat.chat(
+      String fullLlmResponse = '';
+      await _modelChat.chatStream(
         chatEngine: widget.chatEngine,
         text: prompt,
+        onToken: (token) {
+          setState(() {
+            fullLlmResponse += token;
+            // Update the last LLM message with the new token
+            _messages[_messages.length - 1]['text'] = fullLlmResponse;
+          });
+          _chatScrollToBottom();
+        },
       );
-      final response = ModelChat.parseResponse(jsonResponse);
-      final llmResponseText = ModelChat.getMessage(response) ?? 'I could not process that. Please try again.';
-
-      setState(() {
-        _messages.add({
-          'role': 'llm',
-          'text': llmResponseText,
-          'time': DateFormat('hh:mma').format(DateTime.now()),
-        });
-      });
     } catch (e) {
       print('LLM interaction error: $e');
       setState(() {
-        _messages.add({
-          'role': 'llm',
-          'text': 'Sorry, I encountered an error while processing your request.',
-          'time': DateFormat('hh:mma').format(DateTime.now()),
-        });
+        _messages[_messages.length - 1]['text'] = 'Sorry, I encountered an error while processing your request.';
       });
     } finally {
       setState(() {
@@ -310,7 +311,7 @@ class _BookChatScreenState extends State<BookChatScreen> with SingleTickerProvid
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
-                            'AI Book Assistant',
+                            'Gemma-3n Book Assistant',
                             style: TextStyle(
                               fontSize: 18.0,
                               fontWeight: FontWeight.bold,
@@ -373,7 +374,7 @@ class _BookChatScreenState extends State<BookChatScreen> with SingleTickerProvid
                           children: [
                             const CircularProgressIndicator(strokeWidth: 2),
                             const SizedBox(width: 10),
-                            Text('AI is thinking...', style: TextStyle(color: Colors.grey[600])),
+                            Text('Gemma-3n is thinking...', style: TextStyle(color: Colors.grey[600])),
                           ],
                         ),
                       ),

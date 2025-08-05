@@ -141,7 +141,7 @@ class UserProfile {
 // DataClass for a single weight entry in UserProfile's history
 class WeightEntry {
   final String date; // Format: 'yyyy-MM-dd'
-  final double weightKg;
+  late final double weightKg;
 
   WeightEntry({
     required this.date,

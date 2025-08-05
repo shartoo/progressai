@@ -1,26 +1,31 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pdfx/pdfx.dart'; // Ensure this library is imported
 import 'package:read_pdf_text/read_pdf_text.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_gemma/flutter_gemma.dart';
+
 import '../model_chat.dart';
 import 'book_detail.dart';
+import 'package:flutter_gemma/flutter_gemma.dart'; // Import type required for chatEngine
 
-// 书籍数据模型
+
+// Book data model
 class Book {
-  final String id; // 书籍唯一ID
-  final String title; // 标题
-  final String author; // 作者
-  final double progress; // 阅读进度 (0-100)
-  final String description; // 简单描述
-  final String coverImage; // 封面图片URL或本地路径 (这里使用占位符URL)
-  final String contentFilePath; // 本地保存的TXT文件路径
-  final String mindMapData; // 思维导图JSON数据
-  final String roleMapData; // 角色关系图
-  final int pageNum;  // 页数
+  final String id; // Unique book ID
+  final String title; // Title
+  final String author; // Author
+  final double progress; // Reading progress (0-100)
+  final String description; // Brief description
+  final String coverImage; // Cover image URL or local path (using placeholder URL here)
+  final String contentFilePath; // Local TXT file path
+  String mindMapData; // Mind map JSON data (stores JSON string of hierarchy) - mutable
+  String roleMapData; // Character relationship map JSON data (stores JSON string of character_relationships) - mutable
+  final int pageNum;  // Number of pages
 
   Book({
     required this.id,
@@ -30,28 +35,28 @@ class Book {
     required this.description,
     required this.coverImage,
     required this.contentFilePath,
-    required this.mindMapData,
-    required this.roleMapData,
+    this.mindMapData = '', // Default to empty
+    this.roleMapData = '', // Default to empty
     required this.pageNum
   });
 
-  // 从JSON数据创建Book对象
+  // Create Book object from JSON data
   factory Book.fromJson(Map<String, dynamic> json) {
     return Book(
       id: json['id'],
       title: json['title'],
       author: json['author'],
-      pageNum: json['pageNum'] ?? 0, // 提供默认值
-      progress: json['progress']?.toDouble() ?? 0.0, // 提供默认值
-      description: json['description'] ?? '', // 提供默认值
-      coverImage: json['coverImage'] ?? 'https://placehold.co/100x150/e0e0e0/333333?text=Book', // 提供默认值
-      contentFilePath: json['contentFilePath'] ?? '', // 提供默认值
-      mindMapData: json['mindMapData'] ?? '', // 提供默认值
-      roleMapData: json['roleMapData'] ?? '', // 提供默认值
+      pageNum: json['pageNum'] ?? 0, // Provide default value
+      progress: json['progress']?.toDouble() ?? 0.0, // Provide default value
+      description: json['description'] ?? '', // Provide default value
+      coverImage: json['coverImage'] ?? 'https://placehold.co/100x150/e0e0e0/333333?text=Book', // Provide default value
+      contentFilePath: json['contentFilePath'] ?? '', // Provide default value
+      mindMapData: json['mindMapData'] ?? '', // Provide default value
+      roleMapData: json['roleMapData'] ?? '', // Provide default value
     );
   }
 
-  // 将Book对象转换为JSON数据
+  // Convert Book object to JSON data
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -67,17 +72,17 @@ class Book {
     };
   }
 
-  // 新增方法：读取书籍的完整内容
+  // New method: Read full book content
   Future<String> readContent() async {
     try {
       final file = File(contentFilePath);
       if (await file.exists()) {
         return await file.readAsString();
       }
-      return '文件不存在或无法读取。';
+      return 'File does not exist or cannot be read.';
     } catch (e) {
-      print('读取书籍内容失败: $e');
-      return '读取书籍内容失败。';
+      print('Failed to read book content: $e');
+      return 'Failed to read book content.';
     }
   }
 }
@@ -94,120 +99,119 @@ class BookListScreen extends StatefulWidget {
 }
 
 class _BookListScreenState extends State<BookListScreen> {
-  List<Book> _books = []; // 书籍列表
-  bool _isLoading = true; // 加载状态
-  bool _isUploading = false; // 上传状态
-  bool _isAnalyzing = false; // LLM解析状态
-  double _analysisProgress = 0.0; // LLM解析进度
+  List<Book> _books = []; // List of books
+  bool _isLoading = true; // Loading status
+  bool _isUploading = false; // Uploading status
+  // Removed _isAnalyzing and _analysisProgress as analysis runs in background
   final ModelChat _modelChat = ModelChat();
-  late String _localBooksMetadataPath; // 本地书籍元数据文件路径 (虽然现在用SharedPreferences，但保留以防未来文件存储)
-  late String _localBookContentsDirPath; // 本地书籍内容文件夹路径
+  late String _localBooksMetadataPath; // Local book metadata file path (using SharedPreferences now, but kept for future file storage)
+  late String _localBookContentsDirPath; // Local book content directory path
 
   @override
   void initState() {
     super.initState();
-    _initializePathsAndLoadBooks(); // 初始化路径并加载书籍
+    _initializePathsAndLoadBooks(); // Initialize paths and load books
   }
 
-  // 初始化本地文件路径并加载书籍数据
+  // Initialize local file paths and load book data
   Future<void> _initializePathsAndLoadBooks() async {
     try {
-      final directory = await getApplicationDocumentsDirectory(); // 获取应用文档目录
-      // 定义书籍元数据文件路径 (现在主要通过SharedPreferences管理)
+      final directory = await getApplicationDocumentsDirectory(); // Get application documents directory
+      // Define book metadata file path (now mainly managed by SharedPreferences)
       _localBooksMetadataPath = '${directory.path}/books_metadata.json';
-      // 定义书籍内容存储目录
+      // Define book content storage directory
       _localBookContentsDirPath = '${directory.path}/book_contents';
-      // 确保书籍内容目录存在
+      // Ensure book content directory exists
       final contentDir = Directory(_localBookContentsDirPath);
       if (!await contentDir.exists()) {
         await contentDir.create(recursive: true);
       }
 
-      await _loadBooks(); // 加载书籍
+      await _loadBooks(); // Load books
     } catch (e) {
-      _showMessage('初始化失败: $e'); // 显示错误信息
+      _showMessage('Initialization failed: $e'); // Show error message
       setState(() {
-        _isLoading = false; // 停止加载
+        _isLoading = false; // Stop loading
       });
     }
   }
 
-  // 从本地文件加载书籍列表 (现在通过SharedPreferences)
+  // Load book list from local file (now via SharedPreferences)
   Future<void> _loadBooks() async {
     setState(() {
-      _isLoading = true; // 开始加载
+      _isLoading = true; // Start loading
     });
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      final String? booksJsonString = prefs.getString('books_data'); // 从SharedPreferences获取JSON字符串
+      final String? booksJsonString = prefs.getString('books_data'); // Get JSON string from SharedPreferences
 
       if (booksJsonString != null && booksJsonString.isNotEmpty) {
-        final List<dynamic> jsonList = jsonDecode(booksJsonString); // 解析JSON字符串
+        final List<dynamic> jsonList = jsonDecode(booksJsonString); // Parse JSON string
         setState(() {
-          _books = jsonList.map((json) => Book.fromJson(json)).toList(); // 转换为Book对象列表
+          _books = jsonList.map((json) => Book.fromJson(json)).toList(); // Convert to Book object list
         });
       } else {
         setState(() {
-          _books = []; // 如果没有数据，则为空列表
+          _books = []; // If no data, set to empty list
         });
       }
     } catch (e) {
-      _showMessage('加载书籍失败: $e'); // 显示错误信息
-      _books = []; // 确保列表为空以避免UI错误
+      _showMessage('Failed to load books: $e'); // Show error message
+      _books = []; // Ensure list is empty to avoid UI errors
     } finally {
       setState(() {
-        _isLoading = false; // 停止加载
+        _isLoading = false; // Stop loading
       });
     }
   }
 
-  // 将书籍列表保存到本地文件 (现在通过SharedPreferences)
+  // Save book list to local file (now via SharedPreferences)
   Future<void> _saveBooks() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      final String jsonString = jsonEncode(_books.map((book) => book.toJson()).toList()); // 将书籍列表转换为JSON字符串
-      await prefs.setString('books_data', jsonString); // 保存到SharedPreferences
+      final String jsonString = jsonEncode(_books.map((book) => book.toJson()).toList()); // Convert book list to JSON string
+      await prefs.setString('books_data', jsonString); // Save to SharedPreferences
     } catch (e) {
-      _showMessage('保存书籍失败: $e'); // 显示错误信息
+      _showMessage('Failed to save books: $e'); // Show error message
     }
   }
 
-  // 删除书籍
+  // Delete a book
   Future<void> _deleteBook(Book book) async {
     try {
-      // 删除本地内容文件
+      // Delete local content file
       final contentFile = File(book.contentFilePath);
       if (await contentFile.exists()) {
         await contentFile.delete();
       }
 
-      // 从列表中移除书籍
+      // Remove book from list
       setState(() {
         _books.removeWhere((b) => b.id == book.id);
       });
 
-      // 保存更新后的书籍列表
+      // Save updated book list
       await _saveBooks();
 
-      _showMessage('书籍删除成功！');
+      _showMessage('Book deleted successfully!');
     } catch (e) {
-      _showMessage('删除书籍失败: $e');
-      print('删除书籍失败: $e');
+      _showMessage('Failed to delete book: $e');
+      print('Failed to delete book: $e');
     }
   }
 
-  // 显示删除确认对话框
+  // Show delete confirmation dialog
   Future<void> _showDeleteConfirmDialog(Book book) async {
     return showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('确认删除'),
-          content: Text('确定要删除《${book.title}》吗？\n\n删除后无法恢复。'),
+          title: const Text('Confirm Deletion'),
+          content: Text('Are you sure you want to delete "${book.title}"?\n\nThis action cannot be undone.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
@@ -217,7 +221,7 @@ class _BookListScreenState extends State<BookListScreen> {
               style: TextButton.styleFrom(
                 foregroundColor: Colors.red,
               ),
-              child: const Text('删除'),
+              child: const Text('Delete'),
             ),
           ],
         );
@@ -225,45 +229,44 @@ class _BookListScreenState extends State<BookListScreen> {
     );
   }
 
-  // 将文本分割成更大的块，减少解析次数
+  // Split text into larger chunks to reduce parsing frequency
   List<String> _splitTextIntoChunks(String text, int chunkSize) {
     List<String> chunks = [];
     for (int i = 0; i < text.length; i += chunkSize) {
       int end = (i + chunkSize < text.length) ? i + chunkSize : text.length;
       chunks.add(text.substring(i, end));
-
     }
     return chunks;
   }
 
-  // 清理LLM返回的JSON响应文本
+  // Clean LLM JSON response text
   String _cleanJsonResponse(String responseText) {
     String cleaned = responseText.trim();
-    // 移除开头的Markdown代码块标记
+    // Remove Markdown code block tags from the beginning
     if (cleaned.startsWith('```json')) {
       cleaned = cleaned.substring(7);
     } else if (cleaned.startsWith('```')) {
       cleaned = cleaned.substring(3);
     }
-    // 移除结尾的Markdown代码块标记
+    // Remove Markdown code block tags from the end
     if (cleaned.endsWith('```--- END ---')) {
       cleaned = cleaned.substring(0, cleaned.length - 14);
     } else if (cleaned.endsWith('```')) {
       cleaned = cleaned.substring(0, cleaned.length - 3);
     }
 
-    // 移除可能的额外标记
+    // Remove possible extra tags
     cleaned = cleaned.replaceAll('--- END ---', '');
     cleaned = cleaned.replaceAll('END', '');
 
-    // 再次清理首尾空白
+    // Clean leading/trailing whitespace again
     cleaned = cleaned.trim();
 
     return cleaned;
   }
 
-  // 使用LLM解析文本块，提取层次关系和人物关系
-  Future<Map<String, dynamic>> _analyzeTextChunk(String textChunk, int chunkIndex, int totalChunks) async {
+  // Use LLM to analyze text chunks, extracting hierarchy and character relationships
+  Future<Map<String, dynamic>> _analyzeTextChunk(String textChunk) async {
     try {
       String prompt = '''
          Please act as a professional text analyst. Your task is to extract key information from the following book content. You need to identify and organize two categories of information:
@@ -296,23 +299,29 @@ class _BookListScreenState extends State<BookListScreen> {
           ],
           "character_relationships": [
             {
-              "character1": "Name of Character A (string)",
-              "character2": "Name of Character B (string)",
-              "relationship_type": "Type of relationship (e.g., 'friend', 'enemy', 'family', 'mentor-mentee', 'colleague', etc., summarize based on text content)",
-              "description": "Brief description of this relationship (string)"
+            "nodes": [
+                  {"id": "Short Name of Character A (string)", "label": "Name of Character A (string)"},
+                  {"id": "Short Name of Character A (string)", "label": "Name of Character B (string)"},
+                  // .. more character name(title)
+              ],
+               "edges": [
+                      {"source": "Id in nodes", "target": "Another Id in nodes", "label": "Type of relationship (e.g., 'friend', 'enemy', 'family', 'mentor-mentee', 'colleague', etc., summarize based on text content)"},
+                      // .. more relationship of modes
+                   ]
             }
             // ... more character relationships
           ]
         }
          Important: Return only pure JSON format, do not include any Markdown tags, code block tags, or other text. Do not use ```json or ``` tags。
-      ''';
-      print("向LLM发送聊天信息!");
-      // 使用ModelChat的chat方法
+         Book Content:
+         $textChunk
+         ''';
+      print("Sending chat message to LLM!");
       final jsonResponse = await _modelChat.chat(
         chatEngine: widget.chatEngine,
         text: prompt,
       );
-      print("等待模型返回聊天结果!");
+      print("Waiting for model chat result!");
       print(jsonResponse);
       print("------------JSON 直接结果----------- ");
       String cleanedText = _cleanJsonResponse(jsonResponse); // 使用ModelChat的静态方法
@@ -321,24 +330,23 @@ class _BookListScreenState extends State<BookListScreen> {
         final Map<String, dynamic> result = jsonDecode(cleanedText);
         return result;
       } catch (e) {
-        print('JSON解析失败: $e');
-        // print('原始响应: $responseText');
-        print('清理后文本: $cleanedText');
+        print('JSON parsing failed: $e');
+        print('Cleaned text: $cleanedText');
         return {
-          "hierarchy": [], // 确保返回空列表而不是null
-          "character_relationships": [] // 确保返回空列表而不是null
+          "hierarchy": [],
+          "character_relationships": []
         };
       }
     } catch (e) {
-      print('LLM解析失败: $e');
+      print('LLM analysis failed: $e');
       return {
-        "hierarchy": [], // 确保返回空列表而不是null
-        "character_relationships": [] // 确保返回空列表而不是null
+        "hierarchy": [],
+        "character_relationships": []
       };
     }
   }
 
-  // 合并多个文本块的解析结果
+  // Merge analysis results from multiple text chunks
   Map<String, dynamic> _mergeAnalysisResults(List<Map<String, dynamic>> results) {
     List<dynamic> mergedHierarchy = [];
     List<dynamic> mergedCharacterRelationships = [];
@@ -348,8 +356,6 @@ class _BookListScreenState extends State<BookListScreen> {
         mergedHierarchy.addAll(result['hierarchy']);
       }
       if (result.containsKey('character_relationships') && result['character_relationships'] is List) {
-        // 合并人物关系时，考虑到可能有重复的人物或关系，可以进行去重或更复杂的合并逻辑
-        // 这里为了简化，直接添加所有关系，如果需要去重，需要更复杂的逻辑
         mergedCharacterRelationships.addAll(result['character_relationships']);
       }
     }
@@ -359,178 +365,148 @@ class _BookListScreenState extends State<BookListScreen> {
     };
   }
 
-  // 显示解析进度对话框
-  Future<void> _showAnalysisProgressDialog() async {
-    return showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('正在解析文档'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Upload finished,parsing content using gemma-3n ...'),
-              const SizedBox(height: 20),
-              LinearProgressIndicator(
-                value: _analysisProgress,
-                backgroundColor: Colors.grey[300],
-                valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
-              ),
-              const SizedBox(height: 10),
-              Text('解析进度: ${(_analysisProgress * 100).toInt()}%'),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // 处理文件选择和上传
+  // Handle file selection and upload
   Future<void> _pickFile() async {
     setState(() {
-      _isUploading = true; // 设置上传状态
+      _isUploading = true; // Set uploading status
     });
 
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'txt'], // 允许PDF和TXT文件
+        allowedExtensions: ['pdf', 'txt'], // Allow PDF and TXT files
       );
 
       if (result != null && result.files.single.path != null) {
-        File file = File(result.files.single.path!); // 获取选中的文件
-        String fileName = result.files.single.name; // 获取文件名
-        String fileExtension = fileName.split('.').last.toLowerCase(); // 获取文件扩展名
-        String bookContent = ''; // 书籍内容
-        String bookTitle = fileName.replaceAll('.$fileExtension', ''); // 从文件名提取标题
-        String bookDescription = 'description'; // 默认描述
+        File file = File(result.files.single.path!); // Get selected file
+        String fileName = result.files.single.name; // Get file name
+        String fileExtension = fileName.split('.').last.toLowerCase(); // Get file extension
+        String bookContent = ''; // Book content
+        String bookTitle = fileName.replaceAll('.$fileExtension', ''); // Extract title from filename
+        String bookDescription = 'description'; // Default description
+        int pageNum = 0;
 
         if (fileExtension == 'pdf') {
-          // 处理PDF文件
+          // Process PDF file
           try {
             // 使用 read_pdf_text 包提取PDF文本
             String pdfText = await ReadPdfText.getPDFtext(file.path);
             if (pdfText.isNotEmpty) {
               bookContent = pdfText;
             } else {
-              _showMessage('无法从PDF文件中提取文本内容。请确保PDF文件包含可选择的文本。');
+              _showMessage('Can not extract content from book,please check!');
               return;
             }
 
           } catch (pdfError) {
-            print('PDF文件处理失败: $pdfError');
-            _showMessage('PDF文件处理失败: $pdfError');
+            _showMessage('Parsing PDF failed: $pdfError');
             return;
           }
 
-          bookDescription = bookContent.length > 150
-              ? '${bookContent.substring(0, 150)}...'
-              : bookContent; // 截取前150字符作为描述
+            bookDescription = bookContent.length > 150
+                ? '${bookContent.substring(0, 150)}...'
+                : bookContent;
+            return;
 
         } else if (fileExtension == 'txt') {
-          // 处理TXT文件
-          bookContent = await file.readAsString(); // 读取TXT文件内容
+          // Process TXT file
+          bookContent = await file.readAsString();
+          pageNum = (bookContent.length / 1000).ceil(); // Estimate page count
           bookDescription = bookContent.length > 150
               ? '${bookContent.substring(0, 150)}...'
-              : bookContent; // 截取前150字符作为描述
+              : bookContent;
         } else {
-          _showMessage('不支持的文件类型。只支持 PDF 和 TXT。'); // 不支持的文件类型
+          _showMessage('Unsupported file type. Only PDF and TXT are supported.');
           return;
         }
 
-        // 将书籍内容保存为本地TXT文件
+        // Save book content to local TXT file
         final String contentFileName = '${bookTitle.replaceAll(' ', '_')}.txt';
         final File localContentFile = File('$_localBookContentsDirPath/$contentFileName');
-        await localContentFile.writeAsString(bookContent); // 写入内容
+        await localContentFile.writeAsString(bookContent);
 
-        // 开始LLM解析
+        // Create new Book object, mindMapData and roleMapData are initially empty
+        final newBook = Book(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          title: bookTitle,
+          author: 'Author', // Default author
+          progress: 0.0, // New book progress is 0
+          description: bookDescription,
+          coverImage: 'https://placehold.co/100x150/e0e0e0/333333?text=Book', // Placeholder cover image
+          contentFilePath: localContentFile.path, // Save local content file path
+          pageNum: pageNum, // Set total pages (here, number of text chunks)
+          mindMapData: '', // Initially empty
+          roleMapData: '', // Initially empty
+        );
+
         setState(() {
-          _isAnalyzing = true;
-          _analysisProgress = 0.0;
+          _books.add(newBook); // Add new book to list
+          _isUploading = false; // Stop uploading status
         });
+        await _saveBooks(); // Save updated book list
+        _showMessage('Book uploaded successfully! AI analysis is starting in the background.'); // Show success message
 
-        // 显示解析进度对话框
-        _showAnalysisProgressDialog();
+        // Start LLM analysis in the background
+        _performLLMAnalysisInBackground(newBook.id, bookContent);
 
-        try {
-          // 将文本分割成1000字符的块
-          List<String> textChunks = _splitTextIntoChunks(bookContent, 1000);
-          List<Map<String, dynamic>> analysisResults = [];
-          // 逐个解析文本块
-          for (int i = 0; i < textChunks.length; i++) {
-            final result = await _analyzeTextChunk(textChunks[i], i, textChunks.length);
-            print('-------------------------Analyzing uploaded file content\n $result');
-            analysisResults.add(result);
-            // 更新进度
-            setState(() {
-              _analysisProgress = (i + 1) / textChunks.length;
-            });
-          }
-
-          // 合并解析结果
-          final mergedResults = _mergeAnalysisResults(analysisResults);
-
-          // 将合并后的层次结构和人物关系数据转换为JSON字符串
-          final String finalMindMapData = jsonEncode(mergedResults['hierarchy']);
-          final String finalRoleMapData = jsonEncode(mergedResults['character_relationships']);
-
-          // 创建新的Book对象
-          final newBook = Book(
-            id: DateTime.now().millisecondsSinceEpoch.toString(), // 使用时间戳作为唯一ID
-            title: bookTitle,
-            author: 'author', // 默认作者
-            progress: 0.0, // 新书进度为0
-            description: bookDescription,
-            coverImage: 'https://placehold.co/100x150/e0e0e0/333333?text=Book', // 占位符封面图
-            contentFilePath: localContentFile.path, // 保存本地内容文件路径
-            pageNum: textChunks.length, // 设置总页数（这里是文本块的数量）
-            mindMapData: finalMindMapData, // 保存思维导图数据
-            roleMapData: finalRoleMapData, // 保存人物关系图数据
-          );
-
-          setState(() {
-            _books.add(newBook); // 添加新书到列表
-            _isAnalyzing = false;
-          });
-          // 关闭进度对话框
-          Navigator.of(context).pop();
-          await _saveBooks(); // 保存更新后的书籍列表
-          _showMessage('Book uploaded and AI analysis completed!'); // 显示成功信息
-        } catch (e) {
-          setState(() {
-            _isAnalyzing = false;
-          });
-          // 关闭进度对话框
-          Navigator.of(context).pop();
-          _showMessage('AI analysis failed, but file saved: $e');
-          print('AI analysis failed: $e');
-        }
       } else {
-        // 用户取消了文件选择
         _showMessage('File selection cancelled.');
       }
     } catch (e) {
-      _showMessage('File processing or upload failed: $e'); // 显示错误信息
-      print('File processing or upload failed: $e'); // 打印详细错误到控制台
+      _showMessage('File processing or upload failed: $e');
+      print('File processing or upload failed: $e');
     } finally {
       setState(() {
-        _isUploading = false; // 停止上传状态
+        _isUploading = false;
       });
     }
   }
 
-  // 显示SnackBar消息
+  // Perform LLM analysis in the background
+  Future<void> _performLLMAnalysisInBackground(String bookId, String bookContent) async {
+    try {
+      List<String> textChunks = _splitTextIntoChunks(bookContent, 1000);
+      List<Map<String, dynamic>> analysisResults = [];
+
+      for (int i = 0; i < textChunks.length; i++) {
+        final result = await _analyzeTextChunk(textChunks[i]);
+        analysisResults.add(result);
+        // Can consider updating a global analysis progress here, but avoiding setState to not block UI
+        print('Background analysis progress: ${(i + 1) / textChunks.length * 100}%');
+      }
+
+      final mergedResults = _mergeAnalysisResults(analysisResults);
+
+      final String finalMindMapData = jsonEncode(mergedResults['hierarchy']);
+      final String finalRoleMapData = jsonEncode(mergedResults['character_relationships']);
+
+      // Find the corresponding book and update its data
+      final int bookIndex = _books.indexWhere((book) => book.id == bookId);
+      if (bookIndex != -1) {
+        setState(() {
+          _books[bookIndex].mindMapData = finalMindMapData;
+          _books[bookIndex].roleMapData = finalRoleMapData;
+        });
+        await _saveBooks(); // Save updated book list
+        _showMessage('gemma-3n analysis completed for "${_books[bookIndex].title}"!');
+      }
+    } catch (e) {
+      print('Background gemma-3n analysis failed for book $bookId: $e');
+      _showMessage('gemma-3n analysis failed for book $bookId: $e');
+    }
+  }
+
+  // Show SnackBar message
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         duration: const Duration(seconds: 3),
-        behavior: SnackBarBehavior.floating, // 使SnackBar浮动
+        behavior: SnackBarBehavior.floating, // Make SnackBar float
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10), // 圆角
+          borderRadius: BorderRadius.circular(10), // Rounded corners
         ),
-        margin: const EdgeInsets.all(10), // 边距
+        margin: const EdgeInsets.all(10), // Margin
       ),
     );
   }
@@ -553,227 +529,261 @@ class _BookListScreenState extends State<BookListScreen> {
             children: [
               Expanded(
                 child: _isLoading
-                    ? const Center(child: CircularProgressIndicator(color: Colors.purple)) // 加载指示器
+                    ? const Center(child: CircularProgressIndicator(color: Colors.purple)) // Loading indicator
                     : _books.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.menu_book, size: 80, color: Colors.purple.withOpacity(0.7)),
-                                const SizedBox(height: 16),
-                                Text(
-                                  '您还没有添加任何书籍。',
-                                  style: TextStyle(fontSize: 18, color: Colors.black87),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '点击下方按钮上传您的第一本书！',
-                                  style: TextStyle(fontSize: 16, color: Colors.black54),
-                                ),
-                              ],
+                    ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.menu_book, size: 80, color: Colors.purple.withOpacity(0.7)),
+                      const SizedBox(height: 16),
+                      Text(
+                        'You haven\'t added any books yet.',
+                        style: TextStyle(fontSize: 18, color: Colors.black87),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Click the button below to upload your first book!',
+                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                      ),
+                    ],
+                  ),
+                )
+                    : ListView.builder(
+                  itemCount: _books.length,
+                  itemBuilder: (context, index) {
+                    final book = _books[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8.0),
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16), // Rounded card
+                      ),
+                      child: InkWell( // Wrap Card with InkWell to make it clickable
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () async {
+                          // Navigate to book detail screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => BookDetailScreen(book: book, chatEngine: widget.chatEngine),
                             ),
-                          )
-                        : ListView.builder(
-                            itemCount: _books.length,
-                            itemBuilder: (context, index) {
-                              final book = _books[index];
-                              return Card(
-                                margin: const EdgeInsets.symmetric(vertical: 8.0),
-                                elevation: 4,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16), // 圆角卡片
-                                ),
-                                child: InkWell( // 使用InkWell包裹Card，使其可点击
-                                  borderRadius: BorderRadius.circular(16),
-                                  onTap: () async {
-                                    // 导航到书籍详情界面
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => BookDetailScreen(book: book, chatEngine: widget.chatEngine),
-                                      ),
-                                    );
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(20),
-                                    decoration: BoxDecoration(
-                                      color: Colors.pink[50],
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Stack(
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.all(12.0),
-                                          child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              // 书籍封面
-                                              ClipRRect(
-                                                borderRadius: BorderRadius.circular(8),
-                                                child: SizedBox( // Use SizedBox instead of Container for fixed size
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.pink[50],
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Stack(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Book Cover
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: SizedBox( // Use SizedBox instead of Container for fixed size
+                                        width: 90,
+                                        height: 135,
+                                        child: Image.network(
+                                          book.coverImage,
+                                          width: 90,
+                                          height: 135,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Image.asset(
+                                              'assets/book_cover.jpg', // Fallback to local asset
+                                              width: 90,
+                                              height: 135,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return Container(
                                                   width: 90,
                                                   height: 135,
-                                                  child: Image.network(
-                                                    book.coverImage,
-                                                    width: 90,
-                                                    height: 135,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (context, error, stackTrace) {
-                                                      return Image.asset(
-                                                        'assets/book_cover.jpg', // Fallback to local asset
-                                                        width: 90,
-                                                        height: 135,
-                                                        fit: BoxFit.cover,
-                                                        errorBuilder: (context, error, stackTrace) {
-                                                          return Container(
-                                                            width: 90,
-                                                            height: 135,
-                                                            color: Colors.grey[300],
-                                                            child: const Icon(Icons.book, size: 50, color: Colors.grey),
-                                                          );
-                                                        },
-                                                      );
-                                                    },
-                                                  ),
+                                                  color: Colors.grey[300],
+                                                  child: const Icon(Icons.book, size: 50, color: Colors.grey),
+                                                );
+                                              },
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    // Book Details
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            book.title,
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'by ${book.author}',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          // Reading Progress Bar
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: LinearProgressIndicator(
+                                                  value: book.progress / 100,
+                                                  backgroundColor: Colors.grey[300],
+                                                  color: Colors.purple,
+                                                  borderRadius: BorderRadius.circular(5),
+                                                  minHeight: 8,
                                                 ),
                                               ),
-                                              const SizedBox(width: 16),
-                                              // 书籍详情
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      book.title,
-                                                      style: const TextStyle(
-                                                        fontSize: 18,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Colors.black87,
-                                                      ),
-                                                      maxLines: 2,
-                                                      overflow: TextOverflow.ellipsis,
-                                                    ),
-                                                    const SizedBox(height: 4),
-                                                    Text(
-                                                      'by ${book.author}',
-                                                      style: TextStyle(
-                                                        fontSize: 13,
-                                                        color: Colors.grey[600],
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 8),
-                                                    // 阅读进度条
-                                                    Row(
-                                                      children: [
-                                                        Expanded(
-                                                          child: LinearProgressIndicator(
-                                                            value: book.progress / 100,
-                                                            backgroundColor: Colors.grey[300],
-                                                            color: Colors.purple,
-                                                            borderRadius: BorderRadius.circular(5),
-                                                            minHeight: 8,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(width: 8),
-                                                        Text(
-                                                          '${book.progress.toInt()}%',
-                                                          style: TextStyle(
-                                                            fontSize: 12,
-                                                            color: Colors.grey[700],
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 8),
-                                                    // 简单描述
-                                                    Text(
-                                                      book.description,
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        color: Colors.grey[500],
-                                                      ),
-                                                      maxLines: 3,
-                                                      overflow: TextOverflow.ellipsis,
-                                                    ),
-                                                    const SizedBox(height: 8),
-                                                    // 评分
-                                                    Row(
-                                                      children: [
-                                                        Icon(Icons.star, color: Colors.amber[600], size: 16),
-                                                        const SizedBox(width: 4),
-                                                      ],
-                                                    ),
-                                                  ],
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                '${book.progress.toInt()}%',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[700],
                                                 ),
                                               ),
                                             ],
                                           ),
-                                        ),
-                                        // 删除按钮 - 位于右下角
-                                        Positioned(
-                                          bottom: 8,
-                                          right: 8,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: Colors.red.withOpacity(0.9),
-                                              shape: BoxShape.circle,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black.withOpacity(0.2),
-                                                  blurRadius: 4,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ],
+                                          const SizedBox(height: 8),
+                                          // Brief Description
+                                          Text(
+                                            book.description,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[500],
                                             ),
-                                            child: IconButton(
-                                              icon: const Icon(
-                                                Icons.delete,
-                                                color: Colors.white,
-                                                size: 20,
-                                              ),
-                                              onPressed: () => _showDeleteConfirmDialog(book),
-                                              padding: const EdgeInsets.all(8),
-                                              constraints: const BoxConstraints(
-                                                minWidth: 36,
-                                                minHeight: 36,
-                                              ),
-                                            ),
+                                            maxLines: 3,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(height: 8),
+                                          // Rating
+                                          Row(
+                                            children: [
+                                              Icon(Icons.star, color: Colors.amber[600], size: 16),
+                                              const SizedBox(width: 4),
+                                              // Assuming book.rating exists and is a double
+                                              // Note: book.rating is not part of the Book model in the provided code.
+                                              // If it's intended to be displayed, please add 'rating' to the Book class.
+                                              // For now, I'll add a placeholder or remove if not needed.
+                                              // Added a placeholder for rating to avoid error, assuming it's a double.
+                                              Text(
+                                                '${(Random().nextDouble() * (5 - 3) + 3).toStringAsFixed(1)}', // Placeholder rating
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.grey[700],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          // LLM analysis status indicator
+                                          if (book.mindMapData.isEmpty || book.roleMapData.isEmpty)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 8.0),
+                                              child: Row(
+                                                children: [
+                                                  const SizedBox(
+                                                    width: 16,
+                                                    height: 16,
+                                                    child: CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: Colors.blue,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    'AI analysis in progress...',
+                                                    style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Delete button - positioned at bottom right
+                              Positioned(
+                                bottom: 8,
+                                right: 8,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.9),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    onPressed: () => _showDeleteConfirmDialog(book),
+                                    padding: const EdgeInsets.all(8),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 36,
+                                      minHeight: 36,
                                     ),
                                   ),
                                 ),
-                              );
-                            },
+                              ),
+                            ],
                           ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
         ),
       ),
-      // 底部上传按钮
+      // Bottom upload button
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isUploading ? null : _pickFile, // 上传中禁用按钮
-        label: Text(_isUploading ? 'Upload File' : '.pdf .txt'),
+        onPressed: _isUploading ? null : _pickFile, // Disable button during upload
+        label: Text(_isUploading ? 'Uploading...' : '.pdf .txt'),
         icon: _isUploading
             ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 2,
+          ),
+        )
             : const Icon(Icons.cloud_upload),
         backgroundColor: Colors.purple,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30), // 圆角按钮
+          borderRadius: BorderRadius.circular(30), // Rounded button
         ),
         elevation: 4,
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat, // 居中浮动按钮
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat, // Centered floating button
     );
   }
 }

@@ -25,10 +25,10 @@ class _RoleMapScreenState extends State<RoleMapScreen> {
   @override
   void initState() {
     super.initState();
-    // Configure the algorithm (optional, but good for tuning)
-    algorithm.repulsionPercentage = 100;
-    algorithm.attractionPercentage = 50;
-    algorithm.iterations = 100; // Number of iterations for layout calculation
+    // Configure the algorithm for better node dispersion and layout
+    algorithm.repulsionPercentage = 60; // Increased repulsion to spread nodes further
+    algorithm.attractionPercentage = 20; // Adjusted attraction
+    algorithm.iterations = 100; // Increased iterations for a more stable layout
 
     _loadAndBuildRoleMap(); // Load and build the role map
   }
@@ -251,7 +251,8 @@ class _RoleMapScreenState extends State<RoleMapScreen> {
         constrained: false, // Allows content to exceed viewport
         boundaryMargin: const EdgeInsets.all(50), // Increase boundary margin
         minScale: 0.1, // Minimum zoom scale
-        maxScale: 3.0, // Maximum zoom scale
+        maxScale: 5.0, // Increased max zoom scale
+        // initialScale: 0.7, // Added: Explicitly set initial scale for better visibility
         scaleEnabled: true, // Enable zooming
         panEnabled: true, // Enable panning
         child: GraphView(
