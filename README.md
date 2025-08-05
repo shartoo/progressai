@@ -57,7 +57,7 @@ we made a upload button to upload any txt/pdf file to parse by gemma-3n
 
 after finished parsed, you can select to check the mind map or role map of book
 
-![](./readme_imgs/book_chat1.jpg)
+![](./readme_imgs/book_list1.jpg)
 
 
 #### 2.2.2 chat with gemma-3n
