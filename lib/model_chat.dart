@@ -23,6 +23,7 @@ class ModelChat {
       gemmaToken = await _loadGemmaToken();
       print("Loaded Gemma Token: ${gemmaToken.isNotEmpty ? 'Exists' : 'Empty'}");
       final modelDocPath = await getGemmaModelPath();
+      print('model file path $modelDocPath');
       final modelFile = File(modelDocPath);
       // Check if model file exists AND was successfully downloaded previously
       final prefs = await SharedPreferences.getInstance();
@@ -80,7 +81,7 @@ class ModelChat {
 
       // 3. Set model path and create model/chat engine
       // Now, we are confident the model file should be present and valid
-      _gemma.modelManager.setModelPath(modelDocPath);
+      await _gemma.modelManager.setModelPath(modelDocPath);
       print('create model manage from file path $modelDocPath');
       _inferenceModel = await _gemma.createModel(
         modelType: ModelType.gemmaIt,
@@ -113,6 +114,7 @@ class ModelChat {
 
   /// Gets the local path for the Gemma model file.
   Future<String> getGemmaModelPath() async {
+    // /data/data/com.xxx.xxx/app_flutter/
     final directory = await getApplicationDocumentsDirectory();
     return '${directory.path}/$modelFilename';
   }
